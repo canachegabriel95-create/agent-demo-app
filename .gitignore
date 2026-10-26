@@ -4,6 +4,8 @@
 !.env.example
 appsettings.*.local.json
 *.local.json
+# Machine-specific package feeds (e.g. internal Artifactory)
+backend/NuGet.config
 
 # .NET
 bin/

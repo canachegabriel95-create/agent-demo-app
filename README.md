@@ -56,6 +56,17 @@ export ConnectionStrings__Default="Host=localhost;Port=5432;Database=content_rev
 - **Port 5432 or 5050 already in use**: change `POSTGRES_PORT` / `PGADMIN_PORT` in `.env`.
 - **Password change has no effect**: the database is initialized only once. Run `docker compose down -v` to recreate it (this deletes all data).
 
+### Database migrations
+
+The schema is created by EF Core migrations (8 tables; see [docs/database.md](docs/database.md)). With the database running and `ConnectionStrings__Default` set (see below):
+
+```bash
+dotnet tool restore
+dotnet ef database update -p backend/src/ContentReview.Infrastructure -s backend/src/ContentReview.Api
+```
+
+The API also applies migrations at startup when `Database__MigrateOnStartup=true` (the default in Development).
+
 ## API
 
 Prerequisites: .NET 10 SDK and the database running (see above).

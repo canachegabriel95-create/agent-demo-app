@@ -15,22 +15,44 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout GitHub repository
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Push to Azure Repos
+      - name: Sync to Azure Repos
         shell: bash
         env:
           AZURE_DEVOPS_PAT: ${{ secrets.AZURE_DEVOPS_PAT }}
           AZURE_REPO_URL: https://demo-app-gabi.visualstudio.com/DemoApp/_git/DemoApp
+          GIT_TERMINAL_PROMPT: "0"
 
         run: |
+          set -euo pipefail
+
+          # Validate PAT
+          if [ -z "$AZURE_DEVOPS_PAT" ]; then
+            echo "::error::AZURE_DEVOPS_PAT is missing!"
+            exit 1
+          fi
+
+          echo "PAT is configured."
+
+          # Configure Azure remote
           git remote add azure "$AZURE_REPO_URL"
 
-          HEADER_VALUE="AUTHORIZATION: Basic $(printf ':%s' "$AZURE_DEVOPS_PAT" | base64 -w 0)"
-          export HEADER_VALUE
+          # Configure authentication
+          export HEADER_VALUE="AUTHORIZATION: Basic $(printf 'pat:%s' "$AZURE_DEVOPS_PAT" | base64 -w 0)"
 
-          git --config-env=http.extraheader=HEADER_VALUE push azure HEAD:refs/heads/main
+          # Test connection
+          echo "Testing Azure connection..."
+          git --config-env=http.extraheader=HEADER_VALUE \
+            ls-remote azure HEAD
+
+          # Push to Azure
+          echo "Pushing to Azure..."
+          git --config-env=http.extraheader=HEADER_VALUE \
+            push azure HEAD:refs/heads/main
+
+          echo "Sync completed!"

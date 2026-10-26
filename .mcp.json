@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "azure-devops": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@azure-devops/mcp",
+        "demo-app-gabi",
+        "--authentication",
+        "pat"
+      ],
+      "env": {
+        "PERSONAL_ACCESS_TOKEN": "${AZURE_DEVOPS_MCP_TOKEN}"
+      }
+    }
+  }
+}

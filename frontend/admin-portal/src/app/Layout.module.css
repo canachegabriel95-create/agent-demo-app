@@ -1,0 +1,54 @@
+.skipLink {
+  position: absolute;
+  left: -999px;
+  top: 0;
+  padding: 0.5rem 1rem;
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+}
+
+.skipLink:focus {
+  left: 0;
+  z-index: 10;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+}
+
+.brand {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.nav {
+  display: flex;
+  gap: 1rem;
+}
+
+.nav a {
+  color: var(--color-primary-text);
+}
+
+.nav a[aria-current='page'] {
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.main {
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.main:focus {
+  outline: none;
+}

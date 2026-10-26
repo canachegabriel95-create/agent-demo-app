@@ -1,0 +1,25 @@
+.root {
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.heading {
+  margin: 0 0 0.5rem;
+  font-size: 1.125rem;
+}
+
+.summary {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+}
+
+.healthy {
+  color: var(--color-success);
+}
+
+.checks {
+  margin: 0.75rem 0 0;
+  padding-left: 1.25rem;
+}

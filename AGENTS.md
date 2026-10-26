@@ -57,8 +57,8 @@ Dependency direction: `Api -> Infrastructure -> Domain`. `Domain` must not refer
 dotnet build backend/ContentReview.sln        # must produce zero warnings
 dotnet test backend/ContentReview.sln
 
-# for each touched portal (frontend/admin-portal, frontend/author-portal):
-npm run lint
+# for each touched portal (frontend/admin-portal, frontend/author-portal), after `npm ci`:
+npm run lint            # ESLint + Prettier check
 npm run test -- --run
 npm run build
 ```

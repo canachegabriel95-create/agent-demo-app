@@ -45,8 +45,9 @@ Dependency direction: `Api -> Infrastructure -> Domain`. `Domain` must not refer
 
 ## Database migrations
 
-- Schema changes **only** through a new EF Core migration:
+- Schema changes **only** through a new EF Core migration (run `dotnet tool restore` once; the `dotnet-ef` version is pinned in `.config/dotnet-tools.json`):
   `dotnet ef migrations add <Name> -p backend/src/ContentReview.Infrastructure -s backend/src/ContentReview.Api`
+- Details, the table list and the schema tests are described in [docs/database.md](docs/database.md).
 - Never edit or delete a migration that has been applied or merged; add a new one.
 - Review the generated SQL/snapshot before committing. Enums are stored as `text` with check constraints.
 - `users`, `invitations`, `articles` use PostgreSQL `xmin` as the concurrency token (exposed as `version`).

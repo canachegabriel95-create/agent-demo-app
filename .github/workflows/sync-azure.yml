@@ -25,7 +25,7 @@ jobs:
         shell: bash
         env:
           AZURE_DEVOPS_PAT: ${{ secrets.AZURE_DEVOPS_PAT }}
-          AZURE_REPO_URL: https://fcsb.visualstudio.com/_git/DemoApp
+          AZURE_REPO_URL: https://demo-app-gabi.visualstudio.com/DemoApp/_git/DemoApp
 
         run: |
           git remote add azure "$AZURE_REPO_URL"

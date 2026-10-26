@@ -55,3 +55,29 @@ export ConnectionStrings__Default="Host=localhost;Port=5432;Database=content_rev
 - **`Set POSTGRES_PASSWORD in .env`**: you have not created `.env` yet (`cp .env.example .env`).
 - **Port 5432 or 5050 already in use**: change `POSTGRES_PORT` / `PGADMIN_PORT` in `.env`.
 - **Password change has no effect**: the database is initialized only once. Run `docker compose down -v` to recreate it (this deletes all data).
+
+## API
+
+Prerequisites: .NET 10 SDK and the database running (see above).
+
+```bash
+export ConnectionStrings__Default="Host=localhost;Port=5432;Database=content_review;Username=content_review;Password=<your POSTGRES_PASSWORD>"
+dotnet run --project backend/src/ContentReview.Api
+```
+
+The API listens on http://localhost:5080. The connection string is required; the API refuses to start without it.
+
+| Endpoint | Description |
+|---|---|
+| `GET /health` | Anonymous. `200` when healthy, `503` when the database is unreachable. Body: `{ "status": "Healthy", "checks": [{ "name": "api", "status": "Healthy" }, { "name": "database", "status": "Healthy" }] }`. No error details are exposed. |
+
+Settings (appsettings or environment variables; see `.env.example`):
+
+| Setting | Default | Purpose |
+|---|---|---|
+| `ConnectionStrings__Default` | none (required) | PostgreSQL connection string |
+| `Database__MigrateOnStartup` | `true` in Development, otherwise `false` | Apply EF Core migrations at startup |
+| `Cors__AllowedOrigins` | `http://localhost:5173`, `http://localhost:5174` | Origins allowed to call the API |
+| `Auth__SessionLifetimeHours` | `8` | Session token lifetime |
+
+Tests: `dotnet test backend/ContentReview.sln`. Integration tests start their own PostgreSQL through Testcontainers, so Docker must be running.

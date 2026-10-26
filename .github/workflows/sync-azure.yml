@@ -1,0 +1,36 @@
+
+name: Sync GitHub to Azure Repos
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout GitHub repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Push to Azure Repos
+        shell: bash
+        env:
+          AZURE_DEVOPS_PAT: ${{ secrets.AZURE_DEVOPS_PAT }}
+          AZURE_REPO_URL: https://fcsb.visualstudio.com/_git/DemoApp
+
+        run: |
+          git remote add azure "$AZURE_REPO_URL"
+
+          HEADER_VALUE="AUTHORIZATION: Basic $(printf ':%s' "$AZURE_DEVOPS_PAT" | base64 -w 0)"
+          export HEADER_VALUE
+
+          git --config-env=http.extraheader=HEADER_VALUE push azure HEAD:refs/heads/main

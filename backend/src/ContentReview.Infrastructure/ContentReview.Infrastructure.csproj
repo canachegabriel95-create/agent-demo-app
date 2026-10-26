@@ -1,0 +1,7 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\ContentReview.Domain\ContentReview.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

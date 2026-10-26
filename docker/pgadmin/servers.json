@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "ContentReview Local",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "content_review",
+      "Username": "content_review",
+      "SSLMode": "prefer",
+      "Comment": "Pre-registered local database. Enter the POSTGRES_PASSWORD from .env when prompted."
+    }
+  }
+}

@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\ContentReview.Domain\ContentReview.Domain.csproj" />
+    <ProjectReference Include="..\..\src\ContentReview.Infrastructure\ContentReview.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

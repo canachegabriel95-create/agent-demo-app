@@ -1,0 +1,21 @@
+.root {
+  padding: 2rem 1rem;
+  text-align: center;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.title {
+  margin: 0 0 0.25rem;
+  font-weight: 600;
+}
+
+.description {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.action {
+  margin-top: 1rem;
+}

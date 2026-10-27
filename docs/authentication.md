@@ -67,3 +67,18 @@ Tokens and passwords are never logged; the API does not log request headers or b
 - **Logout:** the header shows the administrator's name and a "Log out" button (`data-testid="logout-button"`). It calls `POST /api/auth/logout`, clears the token and goes to `/login`, even if that call fails.
 
 Tests: `src/auth/auth.test.tsx`, `src/auth/returnUrl.test.ts`, `src/app/router.test.tsx`.
+
+## Author Portal
+
+`frontend/author-portal` mirrors the Admin Portal (story F03.4) with `portal: "Author"` and the session key `cr.author.session`. The same rules apply: a stored session is validated with `GET /api/auth/me`, every page except the public ones is behind `RequireAuth`, `returnUrl` must be a relative in-app path, any 401 on a request that carried a token ends the session with the expiry message, and logout always ends the local session.
+
+Differences from the Admin Portal:
+
+- **Public routes:** `/login` and `/register`. `/register` is a placeholder until the registration form (F05.3).
+- **Login page:** a link "Have an invitation? Create an account" to `/register` (`data-testid="register-link"`) and a success banner (`role="status"`, `data-testid="login-registered"`) when the page is opened with `?registered=1`. The banner is not shown for any other value, nor after a failed sign-in.
+- **Generic error:** an Administrator account gets the same "Invalid email or password." as a wrong password (the API returns the same 401 for a role that does not match the portal).
+- **Navigation for a signed-in author:** Dashboard (`/`), My Articles (`/articles`), Feed (`/feed`), Profile (`/profile`) and Log out. The last three open a "Coming soon" page until their stories are delivered.
+
+Tests: `src/auth/auth.test.tsx` (includes the registration entry points), `src/auth/returnUrl.test.ts`, `src/app/router.test.tsx` (navigation and protected placeholders).
+
+The portal code under `src/auth`, `src/api/auth.ts` and `src/api/client.ts` is a deliberate copy of the Admin Portal's, as the two portals do not share a package; keep them in step when one changes.

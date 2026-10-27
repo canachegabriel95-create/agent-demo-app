@@ -1,4 +1,5 @@
 using ContentReview.Domain.Articles;
+using ContentReview.Domain.Auditing;
 using ContentReview.Domain.Entities;
 using ContentReview.Domain.Enums;
 using ContentReview.Domain.Exceptions;
@@ -9,7 +10,7 @@ using Npgsql;
 
 namespace ContentReview.Infrastructure.Revisions;
 
-public sealed class RevisionService(ContentReviewDbContext db, TimeProvider timeProvider) : IRevisionService
+public sealed class RevisionService(ContentReviewDbContext db, TimeProvider timeProvider, IAuditWriter audit) : IRevisionService
 {
     public const string StaleVersionMessage = "The revision was changed by someone else. Reload it and try again.";
     public const string RaceMessage = "The revision has changed. Refresh to see its current status.";
@@ -29,6 +30,7 @@ public sealed class RevisionService(ContentReviewDbContext db, TimeProvider time
         var number = await db.ArticleRevisions.CountAsync(r => r.ArticleId == articleId, cancellationToken) + 1;
         var revision = ArticleRevision.CreateFrom(article, number, timeProvider.GetUtcNow());
         db.ArticleRevisions.Add(revision);
+        RecordAudit(AuditActions.RevisionCreated, revision, authorId);
 
         await SaveTransitionAsync(cancellationToken, AlreadyOpenMessage);
         return await ToDtoAsync(revision, cancellationToken);
@@ -89,6 +91,7 @@ public sealed class RevisionService(ContentReviewDbContext db, TimeProvider time
         }
 
         revision.Submit(timeProvider.GetUtcNow());
+        RecordAudit(AuditActions.RevisionSubmitted, revision, authorId);
 
         await SaveTransitionAsync(cancellationToken, RaceMessage);
         return await ToDtoAsync(revision, cancellationToken);
@@ -106,7 +109,9 @@ public sealed class RevisionService(ContentReviewDbContext db, TimeProvider time
             throw new StaleVersionException(StaleVersionMessage, revision.Version);
         }
 
+        var submissionVersion = revision.SubmissionVersion;
         revision.Withdraw(timeProvider.GetUtcNow());
+        RecordAudit(AuditActions.RevisionWithdrawn, revision, authorId, submissionVersion);
 
         await SaveTransitionAsync(cancellationToken, RaceMessage);
         return await ToDtoAsync(revision, cancellationToken);
@@ -125,6 +130,21 @@ public sealed class RevisionService(ContentReviewDbContext db, TimeProvider time
                 select new RevisionReviewDto(revision.Number, review.SubmissionVersion, review.Decision, review.Reason, review.DecidedAt))
             .ToListAsync(cancellationToken);
     }
+
+    /// <summary>Written by the same <c>SaveChanges</c> as the change: ids and numbers only, never content.</summary>
+    private void RecordAudit(string action, ArticleRevision revision, Guid authorId, int? submissionVersion = null) =>
+        audit.Record(
+            action,
+            nameof(ArticleRevision),
+            revision.Id,
+            authorId,
+            new
+            {
+                articleId = revision.ArticleId,
+                revisionId = revision.Id,
+                revisionNumber = revision.Number,
+                submissionVersion = submissionVersion ?? revision.SubmissionVersion,
+            });
 
     /// <summary>
     /// Saves a status change. The UPDATE only matches the <c>xmin</c> that was read, so when a withdraw, a decision or a

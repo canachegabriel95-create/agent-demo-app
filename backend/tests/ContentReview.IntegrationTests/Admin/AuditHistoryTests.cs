@@ -226,7 +226,8 @@ public class AuditHistoryTests(PostgresFixture postgres) : IAsyncLifetime
         Assert.Equal(AuditActions.All, names);
         Assert.Contains("AdministratorProvisioned", names);
         Assert.Contains("ArticleRejected", names);
-        Assert.Equal(11, names.Length);
+        Assert.Equal(16, names.Length);
+        Assert.Contains("RevisionApproved", names);
     }
 
     // ---- access ----

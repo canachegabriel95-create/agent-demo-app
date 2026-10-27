@@ -14,6 +14,10 @@ Every important action is recorded by the backend as a row of `audit_events`. No
 | `UserSuspended` / `UserReactivated` | `POST /api/admin/users/{id}/suspend` / `reactivate` | the administrator | User |
 | `ArticleSubmitted` / `ArticleWithdrawn` | author submit / withdraw (a resubmission is another `ArticleSubmitted`) | the author | Article |
 | `ArticleApproved` / `ArticleRejected` | `POST /api/admin/articles/{id}/approve` / `reject` | the administrator | Article |
+| `RevisionCreated` / `RevisionSubmitted` / `RevisionWithdrawn` | `POST /api/articles/{id}/revision`, `.../revision/submit`, `.../revision/withdraw` (a resubmission is another `RevisionSubmitted`) | the author | ArticleRevision |
+| `RevisionApproved` / `RevisionRejected` | `POST /api/admin/revisions/{id}/approve` / `reject` | the administrator | ArticleRevision |
+
+Revision events have the revision as entity and the details `{ articleId, revisionId, revisionNumber, submissionVersion }`; `RevisionRejected` adds the `reason` shown to the author. They never contain the title, summary or body of a revision. Tests: `Auditing/RevisionAuditTests.cs`.
 
 An action that is refused or fails (validation, 403, 409, a lost race) writes nothing. Constants: `AuditActions` in `ContentReview.Domain`.
 

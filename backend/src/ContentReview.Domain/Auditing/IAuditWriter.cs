@@ -24,6 +24,11 @@ public static class AuditActions
     public const string ArticleWithdrawn = "ArticleWithdrawn";
     public const string ArticleApproved = "ArticleApproved";
     public const string ArticleRejected = "ArticleRejected";
+    public const string RevisionCreated = "RevisionCreated";
+    public const string RevisionSubmitted = "RevisionSubmitted";
+    public const string RevisionWithdrawn = "RevisionWithdrawn";
+    public const string RevisionApproved = "RevisionApproved";
+    public const string RevisionRejected = "RevisionRejected";
 
     /// <summary>Every action name, in the order of the table in docs/audit.md (the audit history's action filter offers these).</summary>
     public static readonly IReadOnlyList<string> All =
@@ -39,5 +44,10 @@ public static class AuditActions
         ArticleWithdrawn,
         ArticleApproved,
         ArticleRejected,
+        RevisionCreated,
+        RevisionSubmitted,
+        RevisionWithdrawn,
+        RevisionApproved,
+        RevisionRejected,
     ];
 }

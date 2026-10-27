@@ -1,3 +1,4 @@
+using ContentReview.Domain.Auditing;
 using ContentReview.Domain.Entities;
 using ContentReview.Domain.Enums;
 using ContentReview.Domain.Exceptions;
@@ -10,6 +11,7 @@ namespace ContentReview.Infrastructure.Reviews;
 public sealed class RevisionDecisionService(
     ContentReviewDbContext db,
     IReviewQueueService queue,
+    IAuditWriter audit,
     TimeProvider timeProvider) : IRevisionDecisionService
 {
     public const string SuspendedMessage = ReviewDecisionService.SuspendedMessage;
@@ -81,6 +83,14 @@ public sealed class RevisionDecisionService(
         }
 
         db.RevisionReviews.Add(RevisionReview.Create(revision.Id, revision.SubmissionVersion, reviewerId, decision, cleanReason, now));
+        audit.Record(
+            decision == ReviewDecision.Approved ? AuditActions.RevisionApproved : AuditActions.RevisionRejected,
+            nameof(ArticleRevision),
+            revision.Id,
+            reviewerId,
+            decision == ReviewDecision.Approved
+                ? new { articleId = revision.ArticleId, revisionId = revision.Id, revisionNumber = revision.Number, submissionVersion }
+                : new { articleId = revision.ArticleId, revisionId = revision.Id, revisionNumber = revision.Number, submissionVersion, reason = cleanReason });
 
         try
         {

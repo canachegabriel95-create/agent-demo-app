@@ -90,7 +90,3 @@ All user text is rendered as text, never as HTML.
 ## Audit (F17.2)
 
 `RevisionCreated`, `RevisionSubmitted`, `RevisionWithdrawn`, `RevisionApproved` and `RevisionRejected` are written in the same transaction as the change, with the revision as entity and the details `{ articleId, revisionId, revisionNumber, submissionVersion }` (`reason` for a rejection). Refused or conflicting requests write nothing; content is never recorded. They appear in the admin audit history and its action filter. See [audit.md](audit.md).
-
-## Tests
-
-See [traceability.md](traceability.md).

@@ -22,4 +22,4 @@ Placeholder index. Each document below is added by the story noted next to it; s
 | [`api.md`](api.md) | Conventions, error format, correlation id, Swagger UI and authenticating (endpoint reference) | F14.1 / F14.2 (done) / F14 / F16 |
 | `demo-data.md` | Seed data, reset command | F15 |
 | `qa-guide.md` | AI-assisted QA scenarios and how to run them | F15 / F16 |
-| [`traceability.md`](traceability.md) | Acceptance criteria mapped to automated tests (so far: Feature 17; the rest is added by F16) | F17 (done) / F16 |
+| `traceability.md` | Acceptance criteria mapped to automated tests | F16 |

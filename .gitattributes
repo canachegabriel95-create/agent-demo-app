@@ -1,0 +1,4 @@
+# Shell scripts must keep LF line endings even on Windows checkouts, or bash cannot run them.
+*.sh text eol=lf
+# PowerShell scripts use CRLF (see .editorconfig).
+*.ps1 text eol=crlf

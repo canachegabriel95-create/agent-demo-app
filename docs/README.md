@@ -13,6 +13,7 @@ Placeholder index. Each document below is added by the story noted next to it; s
 | [`business-rules.md`](business-rules.md) | Email and password rules (accounts), shared fixtures | F05.1 (done) |
 | [`invitations.md`](invitations.md) | Invitation states, codes, redemption, Admin Portal page | F04 (done) |
 | [`user-management.md`](user-management.md) | Admin Portal authors list, detail page and actions | F06.4 (done) / F06.5 (done) |
+| [`author-profile.md`](author-profile.md) | Author Portal profile page, unsaved-changes behaviour | F07.2 (done) |
 | `lifecycle.md` | Article lifecycle state machine and invitation states | F09 / F16 |
 | [`api.md`](api.md) | Conventions, error format and correlation id (endpoint reference follows) | F14.2 (done) / F14 / F16 |
 | `demo-data.md` | Seed data, reset command | F15 |

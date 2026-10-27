@@ -5,6 +5,7 @@ import { ComingSoonPage } from '../pages/ComingSoonPage';
 import { HomePage } from '../pages/HomePage';
 import { LoginPage } from '../pages/LoginPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
+import { ProfilePage } from '../pages/ProfilePage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { Layout } from './Layout';
 
@@ -27,7 +28,7 @@ export const appRoutes: RouteObject[] = [
           { index: true, element: <HomePage /> },
           { path: 'articles', element: <ComingSoonPage title="My Articles" /> },
           { path: 'feed', element: <ComingSoonPage title="Feed" /> },
-          { path: 'profile', element: <ComingSoonPage title="Profile" /> },
+          { path: 'profile', element: <ProfilePage /> },
           { path: '*', element: <NotFoundPage /> },
         ],
       },

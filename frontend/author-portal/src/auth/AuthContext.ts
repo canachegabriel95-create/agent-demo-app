@@ -12,6 +12,8 @@ export interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<void>;
   /** Ends the session. Never rejects: the local session is cleared even when the API call fails. */
   signOut: () => Promise<void>;
+  /** Updates the signed-in user's details after the author changed them (e.g. the display name in the header). */
+  updateUser: (changes: Partial<Pick<AuthUser, 'fullName'>>) => void;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);

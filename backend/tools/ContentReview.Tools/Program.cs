@@ -1,3 +1,4 @@
-﻿// CLI entry point. Commands (hash-password, seed, reset) are added by later stories.
-Console.WriteLine("ContentReview.Tools: no commands available yet.");
-return 0;
+using ContentReview.Tools;
+
+// CLI entry point. Commands: hash-password (F02.1); seed and reset are added by F15.
+return CliApplication.Run(args, CliEnvironment.FromConsole());

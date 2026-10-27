@@ -14,6 +14,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\ContentReview.Domain\ContentReview.Domain.csproj" />
+    <ProjectReference Include="..\..\src\ContentReview.Infrastructure\ContentReview.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\tools\ContentReview.Tools\ContentReview.Tools.csproj" />
   </ItemGroup>
 
   <ItemGroup>

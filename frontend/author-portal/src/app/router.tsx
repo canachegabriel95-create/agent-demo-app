@@ -11,6 +11,7 @@ import { LoginPage } from '../pages/LoginPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { ProfilePage } from '../pages/ProfilePage';
 import { RegisterPage } from '../pages/RegisterPage';
+import { RevisionPage } from '../pages/RevisionPage';
 import { Layout } from './Layout';
 
 export const appRoutes: RouteObject[] = [
@@ -33,6 +34,7 @@ export const appRoutes: RouteObject[] = [
           { path: 'articles', element: <MyArticlesPage /> },
           { path: 'articles/new', element: <ArticleEditorPage /> },
           { path: 'articles/:id/edit', element: <ArticleEditorPage /> },
+          { path: 'articles/:id/revision', element: <RevisionPage /> },
           { path: 'articles/:id', element: <ArticlePage /> },
           { path: 'feed', element: <FeedPage /> },
           { path: 'feed/:id', element: <FeedArticlePage /> },

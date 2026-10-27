@@ -11,6 +11,8 @@ import {
   type ArticleStatus,
 } from '../api/articles';
 import { ApiError } from '../api/client';
+import { createRevision } from '../api/revisions';
+import { REVISION_STATUS_LABELS } from './RevisionPage';
 import { ConfirmDialog, EmptyState, ErrorState, LoadingState } from '../components';
 import styles from './ArticlePage.module.css';
 
@@ -26,7 +28,10 @@ export const DELETE_CONFLICT_MESSAGE =
 export const STATUS_CONFLICT_MESSAGE = 'This article changed status. Refresh to continue.';
 export const PENDING_NOTICE =
   'Pending review – read-only until an administrator decides or you withdraw it.';
-export const PUBLISHED_NOTICE = 'Published – this article is read-only.';
+export const PUBLISHED_NOTICE =
+  'Published – readers see this version. To change it, edit the published article: the changes are reviewed again and this version stays visible meanwhile.';
+export const REVISE_CONFLICT_MESSAGE =
+  'This article cannot be revised right now (it already has a revision or is not published). The latest version has been loaded.';
 
 const dateTime = new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -56,6 +61,7 @@ export function ArticlePage() {
   const [notFound, setNotFound] = useState(false);
   const [loadError, setLoadError] = useState<Failure>();
   const [dialog, setDialog] = useState<'delete' | 'submit' | 'withdraw'>();
+  const [revising, setRevising] = useState(false);
   const [notice, setNotice] = useState('');
   const [status, setStatus] = useState('');
   const [submitErrors, setSubmitErrors] = useState<string[]>([]);
@@ -158,6 +164,29 @@ export function ArticlePage() {
     }
 
     return undefined;
+  }
+
+  async function startRevision() {
+    if (!article || revising) {
+      return;
+    }
+
+    setRevising(true);
+    setNotice('');
+    try {
+      await createRevision(article.id);
+      navigate(`/articles/${article.id}/revision`);
+    } catch (failure) {
+      if (failure instanceof ApiError && failure.status === 409) {
+        setNotice(REVISE_CONFLICT_MESSAGE);
+        setReload((value) => value + 1);
+      } else {
+        const { message, correlationId } = describe(failure);
+        setNotice(correlationId ? `${message} Reference: ${correlationId}` : message);
+      }
+    } finally {
+      setRevising(false);
+    }
   }
 
   if (notFound) {
@@ -285,6 +314,27 @@ export function ArticlePage() {
         </p>
       )}
 
+      {article.openRevision && (
+        <div
+          className={styles.review}
+          role="region"
+          aria-label="Revision in progress"
+          data-testid="article-revision"
+        >
+          <strong data-testid="article-revision-status">
+            Revision {article.openRevision.number}:{' '}
+            {REVISION_STATUS_LABELS[article.openRevision.status]}
+          </strong>
+          <p>
+            Readers still see the published version. This article will change only when an
+            administrator approves the revision.
+          </p>
+          <Link to={`/articles/${article.id}/revision`} data-testid="article-open-revision">
+            Open revision
+          </Link>
+        </div>
+      )}
+
       {rejection && (
         <div
           className={styles.review}
@@ -346,6 +396,17 @@ export function ArticlePage() {
             data-testid="article-withdraw"
           >
             Withdraw submission
+          </button>
+        )}
+        {can('revise') && (
+          <button
+            type="button"
+            className={styles.primary}
+            onClick={startRevision}
+            disabled={revising}
+            data-testid="article-revise"
+          >
+            {revising ? 'Starting…' : 'Edit published article'}
           </button>
         )}
         {can('delete') && (

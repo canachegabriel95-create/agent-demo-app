@@ -21,6 +21,7 @@ import {
 } from '../components';
 import { useCategories } from '../hooks/useCategories';
 import { STATUS_LABELS } from './ArticlePage';
+import { REVISION_STATUS_LABELS } from './RevisionPage';
 import styles from './MyArticlesPage.module.css';
 
 export const SEARCH_DEBOUNCE_MS = 300;
@@ -310,6 +311,18 @@ export function MyArticlesPage() {
                   {' · '}
                   <span data-testid="article-row-date">{relevantDate(article)}</span>
                 </p>
+                {article.openRevision && (
+                  <p className={styles.meta}>
+                    <Link
+                      to={`/articles/${article.id}/revision`}
+                      aria-label={`Revision of ${article.title}`}
+                      data-testid="article-row-revision"
+                    >
+                      Revision {article.openRevision.number}:{' '}
+                      {REVISION_STATUS_LABELS[article.openRevision.status]}
+                    </Link>
+                  </p>
+                )}
                 <div className={styles.actions}>
                   {can('edit') && (
                     <Link

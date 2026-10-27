@@ -8,6 +8,16 @@ export interface ArticleReview {
   decidedAt: string;
 }
 
+export type RevisionStatus = 'Draft' | 'PendingReview' | 'Rejected' | 'Approved';
+
+/** The revision of a published article that is being edited or reviewed (at most one). */
+export interface OpenRevision {
+  id: string;
+  number: number;
+  status: RevisionStatus;
+  updatedAt: string;
+}
+
 /** What the API returns for one of the signed-in author's articles. */
 export interface Article {
   id: string;
@@ -22,10 +32,14 @@ export interface Article {
   submittedAt: string | null;
   publishedAt: string | null;
   latestReview: ArticleReview | null;
-  /** What the lifecycle allows right now, e.g. `edit`, `delete`, `submit`, `withdraw`. */
+  /** What the lifecycle allows right now, e.g. `edit`, `delete`, `submit`, `withdraw`, `revise`. */
   allowedActions: string[];
   /** Concurrency token: send it back when saving. */
   version: number;
+  /** Which published version is live: 0 until published, plus one per approved revision. */
+  publishedVersion: number;
+  /** The revision in progress, or `null`. The article itself stays as readers see it until it is approved. */
+  openRevision: OpenRevision | null;
 }
 
 /** The editable content of an article. An empty `categoryId` means no category. */

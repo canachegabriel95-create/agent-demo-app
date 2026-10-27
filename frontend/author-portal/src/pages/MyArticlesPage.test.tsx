@@ -28,6 +28,7 @@ function item(overrides: Partial<MyArticleItem> = {}): MyArticleItem {
     latestRejectionReason: null,
     allowedActions: ['edit', 'delete', 'submit'],
     version: 10,
+    openRevision: null,
     ...overrides,
   };
 }

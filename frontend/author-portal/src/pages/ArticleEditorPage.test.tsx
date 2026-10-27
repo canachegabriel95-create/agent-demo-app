@@ -25,6 +25,8 @@ const DRAFT: Article = {
   latestReview: null,
   allowedActions: ['edit', 'delete', 'submit'],
   version: 100,
+  publishedVersion: 0,
+  openRevision: null,
 };
 
 let current: Article;

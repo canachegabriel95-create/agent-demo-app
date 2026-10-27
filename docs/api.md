@@ -476,3 +476,29 @@ Query: `search` (any part of the title, ignoring case, `%` and `_` literal, at m
 Always all four statuses; one without articles is 0. One grouped query. Counts reflect a submit, withdraw, approve, reject or delete on the very next request.
 
 Tests: `backend/tests/ContentReview.IntegrationTests/Articles/MyArticlesTests.cs`.
+
+## Feed (author)
+
+The published articles of **all** authors, for any signed-in author to read. Read-only: only `GET` exists under `/api/feed` (POST, PUT, PATCH and DELETE are 405). Visitors get 401, administrators 403, a suspended reader 401.
+
+| Method | Route | Success |
+|---|---|---|
+| GET | `/api/feed` | 200 paged `FeedItem` |
+| GET | `/api/feed/{id}` | 200 `FeedArticle` |
+
+- **Only Published.** The status is part of the query itself, not an option: a draft, pending or rejected article never appears in the list, and its id on the detail route is a plain 404 (the same 404 as an unknown id; nothing says the article exists).
+- **Approved text.** Title, summary, body and category are those of the submission the administrator approved, not whatever the article row holds now.
+- **Suspension does not matter.** An author's published articles stay in the feed when the author is suspended.
+- **No identity.** Authors are only named: `authorDisplayName` (their full name). No author id and no email appear anywhere.
+
+Query of the list: `search` (any part of the title, ignoring case, `%` and `_` literal, at most 150 characters), `categoryId`, `page`, `pageSize` (default 20, at most 100). Newest publication first, ties broken by id so pages never repeat or skip. A bad value is a 400.
+
+```json
+{ "items": [ { "id": "…", "title": "…", "summary": "…", "category": { "id": "…", "name": "Science" },
+    "authorDisplayName": "Ann Author", "publishedAt": "…" } ],
+  "page": 1, "pageSize": 20, "totalCount": 1 }
+```
+
+The detail has the same fields plus `body`.
+
+Tests: `backend/tests/ContentReview.IntegrationTests/Articles/FeedTests.cs`.

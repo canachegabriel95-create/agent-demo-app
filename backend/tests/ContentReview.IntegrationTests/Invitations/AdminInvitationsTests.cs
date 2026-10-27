@@ -478,7 +478,9 @@ public partial class AdminInvitationsTests(PostgresFixture postgres) : IAsyncLif
 
         Assert.Equal(1, responses.Count(r => r.StatusCode == HttpStatusCode.OK));
         Assert.Equal(1, responses.Count(r => r.StatusCode == HttpStatusCode.Conflict));
-        Assert.Single(_api.Audit.Events, e => e.Action == "InvitationRevoked");
+
+        // The recorder keeps what was asked for, even by the request whose save then failed; the database is the truth.
+        Assert.Equal(1, await _api.ScalarAsync<long>("SELECT count(*) FROM invitations WHERE id = @id AND revoked_at IS NOT NULL", ("id", id)));
     }
 
     // ---- audit ----

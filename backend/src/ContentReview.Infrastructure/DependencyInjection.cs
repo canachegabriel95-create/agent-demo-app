@@ -43,6 +43,7 @@ public static class DependencyInjection
         services.AddScoped<ISessionService, SessionService>();
         services.TryAddScoped<IAuditWriter, NoOpAuditWriter>();
         services.AddScoped<IInvitationService, InvitationService>();
+        services.AddScoped<IInvitationRedemptionService, InvitationRedemptionService>();
 
         return services;
     }

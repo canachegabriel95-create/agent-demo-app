@@ -1,3 +1,4 @@
+using ContentReview.Domain.Enums;
 using ContentReview.Domain.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
@@ -32,6 +33,7 @@ public sealed class KnownExceptionHandler(IProblemDetailsService problems, ILogg
                 Status = StatusCodes.Status403Forbidden,
                 Title = "You do not have permission to perform this action.",
             },
+            InvitationNotRedeemableException notRedeemable => InvitationNotRedeemable(notRedeemable.Reason),
             ConflictException conflict => Conflict(conflict.Message),
             DbUpdateConcurrencyException => Conflict("The resource was changed by someone else. Reload it and try again."),
             DbUpdateException { InnerException: PostgresException { SqlState: UniqueViolation } } =>
@@ -48,6 +50,14 @@ public sealed class KnownExceptionHandler(IProblemDetailsService problems, ILogg
 
         context.Response.StatusCode = details.Status!.Value;
         return await problems.TryWriteAsync(new ProblemDetailsContext { HttpContext = context, ProblemDetails = details });
+    }
+
+    /// <summary>400 with the reason in words (<c>title</c>) and as a stable code (<c>reason</c>).</summary>
+    private static ProblemDetails InvitationNotRedeemable(InvitationValidationResult reason)
+    {
+        var details = new ProblemDetails { Status = StatusCodes.Status400BadRequest, Title = reason.Message() };
+        details.Extensions["reason"] = reason.ToString();
+        return details;
     }
 
     private static ProblemDetails Conflict(string detail) => new()

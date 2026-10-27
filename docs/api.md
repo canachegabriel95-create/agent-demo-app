@@ -24,7 +24,7 @@ Every error response is [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457) `appl
 | 404 | The resource does not exist or is not the caller's | Resource not found. | no `detail`, so the two cases look the same |
 | 405 | Wrong HTTP method for a route | Method Not Allowed | |
 | 409 | Stale `version`, invalid lifecycle transition, duplicate value, already-used invitation | The request conflicts with the current state of the resource. | `detail` says what happened |
-| 429 | Too many login attempts | Too many login attempts. Try again later. | `Retry-After` |
+| 429 | Too many login or invitation-check attempts from one address | Too many attempts. Try again later. | `Retry-After` |
 | 500 | Anything unexpected | An unexpected error occurred. | nothing else: no message, no stack trace, no inner exception, in every environment |
 
 Validation errors look like this; field names are camelCase and nested names use dots (`nested.name`, `items[0].name`):
@@ -107,3 +107,40 @@ All routes are under `/api/admin/invitations` and need an Administrator token (n
 - **Audit:** `InvitationCreated` and `InvitationRevoked` with details `{ email, codeSuffix }` (last 4 characters). Until the audit history story (F13.1) provides the real writer, `IAuditWriter` is a no-op (`NoOpAuditWriter`); the integration tests replace it with a recorder and check what would be written.
 
 Tests: `backend/tests/ContentReview.IntegrationTests/Invitations/AdminInvitationsTests.cs`, `backend/tests/ContentReview.UnitTests/Domain/InvitationCodeTests.cs`, `InvitationTests.cs`.
+
+## Registration (anonymous)
+
+### `POST /api/registration/validate-invitation`
+
+Body `{ code, email }`. Checks an invitation code and email without using the code up, so the registration form can warn early. Rate limited with the login limiter (`Auth:LoginAttemptsPerMinute` per client address, shared with `POST /api/auth/login`).
+
+- `200 { "valid": true }`
+- `400` ProblemDetails whose `title` is the sentence to show and whose `reason` is a stable code:
+
+| `reason` | `title` |
+|---|---|
+| `NotFound` | This invitation code was not found. |
+| `EmailMismatch` | This invitation was issued for a different email address. |
+| `Expired` | This invitation has expired. |
+| `Revoked` | This invitation has been revoked. |
+| `AlreadyUsed` | This invitation has already been used. |
+
+A missing `code` or `email` is an ordinary validation 400 with `errors`. The email is checked before the status, so a wrong email never learns whether the code was used or revoked. The reasons do tell a caller that a code exists, which the story asks for; the rate limit is what slows guessing, and a code has 60 random bits.
+
+### Consuming an invitation (for F05.2)
+
+`IInvitationRedemptionService` in `ContentReview.Infrastructure.Invitations` is the only code that may use an invitation.
+
+```csharp
+await using var transaction = await db.Database.BeginTransactionAsync(ct);
+db.Users.Add(user);
+await db.SaveChangesAsync(ct);
+await redemption.ConsumeAsync(request.Code, request.Email, user.Id, ct); // throws InvitationNotRedeemableException
+await transaction.CommitAsync(ct);
+```
+
+- `ConsumeAsync` runs one conditional `UPDATE` (`used_at IS NULL AND revoked_at IS NULL AND expires_at > now AND normalized_email = email`), so of any number of simultaneous calls for a code exactly one updates the row; the others find it used. It must run inside the transaction that creates the account (it throws `InvalidOperationException` otherwise), so a rolled-back registration leaves the invitation available.
+- When no row was updated, the invitation is read again to find the exact `InvitationValidationResult` and `InvitationNotRedeemableException(reason)` is thrown; the API answers it as the same 400 ProblemDetails with `reason`.
+- Codes are normalized (trimmed, upper-cased, dashes optional); the email is normalized with `Trim().ToLowerInvariant()`. "Now" comes from the injected `TimeProvider`, not the database clock, so tests control it.
+
+Tests: `backend/tests/ContentReview.IntegrationTests/Invitations/InvitationRedemptionTests.cs` (10 parallel consumptions give exactly one winner; every reason; rollback; endpoint and rate limit).

@@ -9,7 +9,7 @@ Placeholder index. Each document below is added by the story noted next to it; s
 | [`authentication.md`](authentication.md) | Login, logout, current user, session rules, rate limit | F03.1 (done) |
 | [`admin-provisioning.md`](admin-provisioning.md) | Creating and verifying the first administrator, security notes | F02.3 (done) |
 | [`password-hashing.md`](password-hashing.md) | Shared password hashing service, password policy, `hash-password` CLI | F02.1 (done) |
-| `permissions.md` | Roles, policies, ownership rules | F03 / F16 |
+| [`permissions.md`](permissions.md) | Roles, policies, ownership rules | F03.2 (done) / F16 |
 | `lifecycle.md` | Article lifecycle state machine and invitation states | F09 / F16 |
 | `api.md` | Endpoints, conventions, error format | F14 / F16 |
 | `demo-data.md` | Seed data, reset command | F15 |

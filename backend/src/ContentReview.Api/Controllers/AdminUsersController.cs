@@ -42,6 +42,23 @@ public sealed record UpdateProfileRequest
     public uint? Version { get; init; }
 }
 
+public sealed record SuspendUserRequest
+{
+    /// <summary>Why the account is suspended, 10-500 characters after trimming.</summary>
+    public string? Reason { get; init; }
+
+    /// <summary>The <c>version</c> of the author the administrator was looking at.</summary>
+    [Required]
+    public uint? Version { get; init; }
+}
+
+public sealed record ReactivateUserRequest
+{
+    /// <summary>The <c>version</c> of the author the administrator was looking at.</summary>
+    [Required]
+    public uint? Version { get; init; }
+}
+
 /// <summary>Administrators look up author accounts. Administrators themselves are not listed.</summary>
 [Route("api/admin/users")]
 public sealed class AdminUsersController(
@@ -100,4 +117,39 @@ public sealed class AdminUsersController(
         Guid id, UpdateProfileRequest request, CancellationToken cancellationToken) =>
         Ok(await management.UpdateProfileAsync(
             id, request.FullName, request.Bio, request.Version!.Value, currentUser.UserId, cancellationToken));
+
+    /// <summary>Suspends an author and signs the author out everywhere.</summary>
+    /// <remarks>
+    /// Saves the status, the reason (10-500 characters) and the time, revokes every session of the author and writes a
+    /// <c>UserSuspended</c> audit event, in one transaction. The author's next request gets 401 and signing in fails.
+    /// Articles, submissions and reviews are not changed. 400 for a missing or invalid reason and for an administrator's
+    /// id; 404 for an unknown id; 409 when <c>version</c> is stale or the author is already suspended.
+    /// </remarks>
+    [HttpPost("{id:guid}/suspend")]
+    [ProducesResponseType<UserDetails>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<UserDetails>> Suspend(
+        Guid id, SuspendUserRequest request, CancellationToken cancellationToken) =>
+        Ok(await management.SuspendAsync(id, request.Reason, request.Version!.Value, currentUser.UserId, cancellationToken));
+
+    /// <summary>Makes a suspended author Active again.</summary>
+    /// <remarks>
+    /// Clears the reason and the time and writes a <c>UserReactivated</c> audit event. Sessions revoked by the
+    /// suspension stay revoked: the author signs in again. 400 for an administrator's id; 404 for an unknown id; 409 when
+    /// <c>version</c> is stale or the author is not suspended.
+    /// </remarks>
+    [HttpPost("{id:guid}/reactivate")]
+    [ProducesResponseType<UserDetails>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<UserDetails>> Reactivate(
+        Guid id, ReactivateUserRequest request, CancellationToken cancellationToken) =>
+        Ok(await management.ReactivateAsync(id, request.Version!.Value, currentUser.UserId, cancellationToken));
 }

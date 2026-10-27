@@ -1,5 +1,6 @@
 using ContentReview.Domain.Common;
 using ContentReview.Domain.Enums;
+using ContentReview.Domain.Exceptions;
 
 namespace ContentReview.Domain.Entities;
 
@@ -8,6 +9,8 @@ public class User
     public const int FullNameMinLength = 2;
     public const int FullNameMaxLength = 100;
     public const int BioMaxLength = 1000;
+    public const int SuspensionReasonMinLength = 10;
+    public const int SuspensionReasonMaxLength = 500;
     public const int PasswordHashMaxLength = 512;
 
     private User()
@@ -84,5 +87,59 @@ public class User
         }
 
         return changed;
+    }
+
+    /// <summary>Suspends an Active author with a reason (10-500 characters after trimming).</summary>
+    /// <exception cref="ConflictException">The account is already suspended.</exception>
+    public void Suspend(string reason, DateTimeOffset now)
+    {
+        RequireAuthor();
+        var text = Guard.Text(reason, nameof(reason), SuspensionReasonMinLength, SuspensionReasonMaxLength);
+        if (Status == UserStatus.Suspended)
+        {
+            throw new ConflictException("The account is already suspended.");
+        }
+
+        Status = UserStatus.Suspended;
+        SuspensionReason = text;
+        SuspendedAt = Guard.Utc(now);
+        UpdatedAt = SuspendedAt.Value;
+    }
+
+    /// <summary>Makes a suspended author Active again and clears the reason and the timestamp.</summary>
+    /// <exception cref="ConflictException">The account is not suspended.</exception>
+    public void Reactivate(DateTimeOffset now)
+    {
+        RequireAuthor();
+        if (Status != UserStatus.Suspended)
+        {
+            throw new ConflictException("The account is not suspended.");
+        }
+
+        Status = UserStatus.Active;
+        SuspensionReason = null;
+        SuspendedAt = null;
+        UpdatedAt = Guard.Utc(now);
+    }
+
+    /// <summary>
+    /// Defence in depth for services that change an author's content: sessions of suspended users are already refused,
+    /// but a service must not rely on that alone.
+    /// </summary>
+    /// <exception cref="ForbiddenException">The account is suspended.</exception>
+    public void EnsureAuthorActive()
+    {
+        if (Status != UserStatus.Active)
+        {
+            throw new ForbiddenException("This account is suspended.");
+        }
+    }
+
+    private void RequireAuthor()
+    {
+        if (Role != UserRole.Author)
+        {
+            throw new InvalidOperationException("Only author accounts can be suspended or reactivated.");
+        }
     }
 }

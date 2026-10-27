@@ -27,6 +27,7 @@ export function Layout() {
               <NavLink to="/" end>
                 Home
               </NavLink>
+              <NavLink to="/reviews">Review queue</NavLink>
               <NavLink to="/users">Authors</NavLink>
               <NavLink to="/invitations">Invitations</NavLink>
             </>

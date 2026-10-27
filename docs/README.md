@@ -16,6 +16,7 @@ Placeholder index. Each document below is added by the story noted next to it; s
 | [`author-profile.md`](author-profile.md) | Author Portal profile page, unsaved-changes behaviour | F07.2 (done) |
 | [`article-lifecycle.md`](article-lifecycle.md) | Article state machine, transitions, validation, conflicts | F09.1 (done) / F16.2 |
 | [`article-editor.md`](article-editor.md) | Author Portal draft editor, article view, lifecycle buttons and rejection feedback | F08.3 (done) / F08.4 (done) / F09.3 (done) |
+| [`admin-review.md`](admin-review.md) | Admin Portal review queue (filters, sort, URL state) and review page | F10.3 (done) / F10.4 |
 | `lifecycle.md` | Invitation states and the combined lifecycle overview | F16 |
 | [`api.md`](api.md) | Conventions, error format and correlation id (endpoint reference follows) | F14.2 (done) / F14 / F16 |
 | `demo-data.md` | Seed data, reset command | F15 |

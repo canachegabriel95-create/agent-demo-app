@@ -75,7 +75,11 @@ Currently the repo only contains `README.md`, `.mcp.json` (Azure DevOps MCP) and
 | Rejected | Edit and save | Rejected | Owner |
 | Rejected | Resubmit | PendingReview | Owner |
 
-PendingReview and Published are read-only. Unsupported transitions are rejected by the API. Racing transitions (e.g. withdraw vs. review) → exactly one succeeds, the other gets 409. Each submission records timestamp and submission version; earlier review decisions are preserved across resubmissions. Review actions are blocked for articles of suspended authors.
+PendingReview is read-only, and so is a Published article itself. Unsupported transitions are rejected by the API. Racing transitions (e.g. withdraw vs. review) → exactly one succeeds, the other gets 409. Each submission records timestamp and submission version; earlier review decisions are preserved across resubmissions. Review actions are blocked for articles of suspended authors.
+
+### Revisions of published articles (Feature 17)
+
+An author edits a Published article through a **revision** (separate entity, own Draft → PendingReview → Approved/Rejected lifecycle with withdraw and resubmit, at most one open per article). The published article stays untouched and visible in the feed until an administrator approves the revision; approval replaces its content atomically and keeps the replaced version in history. Rejection leaves the published version as is. Racing decisions/withdrawals → exactly one succeeds, the rest get 409. Revision actions are audited (`Revision*`). Details: `docs/article-revisions.md`.
 
 ### Validation limits
 

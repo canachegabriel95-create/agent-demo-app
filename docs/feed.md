@@ -1,6 +1,6 @@
 # Feed (Author Portal)
 
-Published articles of all authors, read-only. Data: `GET /api/feed` and `GET /api/feed/{id}` (see [api.md](api.md#feed-author)).
+Published articles of all authors, read-only. The content is the article's own, i.e. the latest approved version: a revision that is being edited, pending or rejected never shows. Data: `GET /api/feed` and `GET /api/feed/{id}` (see [api.md](api.md#feed-author)).
 
 ## `/feed` (nav "Feed")
 
@@ -16,7 +16,7 @@ Each card is `feed-card-<id>`. States: loading, error with "Try again", "No publ
 
 ## `/feed/:id`
 
-Source `FeedArticlePage.tsx`. Title, category, author display name, date, summary and body, read-only: **no edit or delete controls, not even on the author's own article** (a published article cannot be changed). Draft, pending, rejected and unknown ids all show "Article not found". Loading and error (with retry) states exist.
+Source `FeedArticlePage.tsx`. Title, category, author display name, date, summary and body, read-only: **no edit or delete controls, not even on the author's own article** (a published article cannot be edited in place: an author's change is a revision that replaces the content only when an administrator approves it, see [article-revisions.md](article-revisions.md)). Draft, pending, rejected and unknown ids all show "Article not found". Loading and error (with retry) states exist.
 
 ## Safe rendering
 

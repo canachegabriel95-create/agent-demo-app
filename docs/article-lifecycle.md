@@ -1,6 +1,6 @@
 # Article lifecycle
 
-An article moves through four statuses. The rules live in one place, `ArticleLifecycle` (`backend/src/ContentReview.Domain/Articles/ArticleLifecycle.cs`); the API, the portals and the tests all ask it what is allowed. This page is the reference; F16.2 finalizes it with the API and UI details.
+An article moves through four statuses. The rules live in one place, `ArticleLifecycle` (`backend/src/ContentReview.Domain/Articles/ArticleLifecycle.cs`); the API, the portals and the tests all ask it what is allowed. This page is the reference; F16.2 finalizes it with the API and UI details. Editing a *published* article is covered by [article-revisions.md](article-revisions.md).
 
 ```mermaid
 stateDiagram-v2
@@ -13,7 +13,7 @@ stateDiagram-v2
     PendingReview --> Rejected: reject
     Rejected --> Rejected: edit
     Rejected --> PendingReview: resubmit
-    Published --> [*]: read-only
+    Published --> Published: revise (a separate revision, see article-revisions.md)
 ```
 
 ## Transitions
@@ -31,7 +31,7 @@ These are the only valid ones. Anything else is refused.
 | Rejected | Edit | Rejected | Owner |
 | Rejected | Submit (resubmit) | PendingReview | Owner |
 
-- **Published** allows no action to anyone: it is read-only.
+- **Published** cannot be edited, deleted, submitted or withdrawn: the article itself changes only when an administrator approves a *revision* of it. The owner may start that revision (`revise`, see [article-revisions.md](article-revisions.md)); it is not part of `ArticleLifecycle`, so the table above stays complete.
 - **PendingReview** cannot be edited or deleted; withdraw it first.
 - A **Rejected** article can be edited and resubmitted but not deleted.
 - Delete exists only for a Draft.

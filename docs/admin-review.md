@@ -58,3 +58,7 @@ A 409 (the author withdrew or resubmitted, another administrator decided, the au
 Other failures stay in the dialog with the correlation id. A 400 on the reason is shown on the field.
 
 Tests: `ReviewPage.test.tsx`; API `ReviewDecisionTests.cs`.
+
+## Revisions of published articles
+
+The queue lists pending **revisions** next to new submissions (column *Type*: "Revision" / "New article"). A revision opens at `/reviews/revisions/:revisionId` (`RevisionReviewPage.tsx`): the author, the published version ("Published now") and the revision side by side, the review history of that revision, and Approve / Reject. Approving replaces the published content; rejecting needs a reason (10-1000 characters) and leaves it untouched. A 409 (another administrator decided, the author withdrew or resubmitted, suspended author) opens the same kind of dialog as for articles and offers a refresh. Details: [article-revisions.md](article-revisions.md).

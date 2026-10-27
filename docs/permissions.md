@@ -7,7 +7,7 @@ Roles and resource ownership are enforced by the API itself, independently of wh
 | Policy | Who | Used for |
 |---|---|---|
 | `AdminOnly` | authenticated, role `Administrator` | `/api/admin/**` |
-| `AuthorOnly` | authenticated, role `Author` | `/api/me/**`, `/api/articles/**`, `/api/feed/**` |
+| `AuthorOnly` | authenticated, role `Author` | `/api/me/**`, `/api/articles/**` (including `/api/articles/{id}/revision/**`), `/api/feed/**` |
 | *(authenticated)* | any signed-in user | `GET /api/categories`, `GET /api/auth/me`, `POST /api/auth/logout` |
 | *(fallback)* | any signed-in user | every endpoint that declares nothing |
 
@@ -60,3 +60,7 @@ if (article is null) return NotFound();   // not owned and not existing look the
 
 - `AuthorizationTests`: role matrix (401 / 403 / 200) across the admin, author, any-authenticated, unmarked and anonymous groups, using the test-only endpoints in `Probes.cs`, plus ownership (own article 200, another author's or unknown id 404 with the same body).
 - `AuthorizationConventionTests`: every controller action has a policy or `[AllowAnonymous]`; route prefixes match their policy; every registered endpoint carries authorization metadata and the anonymous set is exactly `/health` and `POST /api/auth/login`.
+
+## Revisions
+
+An author can create and change a revision only of **their own** published article (another author's article is a 404, like an unknown one); an administrator decides on revisions through `/api/admin/revisions/**` and cannot edit them. A suspended author cannot start, edit, submit or withdraw a revision (401, like every request of a suspended account) and an administrator cannot decide on their revisions (409). See [article-revisions.md](article-revisions.md).

@@ -463,6 +463,10 @@ Articles of **suspended authors stay in the queue**; `author.status` says `Suspe
 
 Tests: `backend/tests/ContentReview.IntegrationTests/Reviews/ReviewQueueTests.cs`, `ReviewDecisionTests.cs`.
 
+## Article revisions (author and administrator)
+
+Editing a published article, reviewing the revision and the endpoints are described in [article-revisions.md](article-revisions.md). The queue (`GET /api/admin/reviews/queue`) lists pending revisions too: each item has `kind` (`Article` or `Revision`) and `revisionId`; an article's `allowedActions` can contain `revise`, and its `openRevision` shows the revision in progress.
+
 ## My articles (author)
 
 An author's overview of their **own** articles, published ones included. The author is always the session's user: nothing in the query can name another author (an `authorId` is ignored). Another author's published article is visible only through the published feed (F12). Administrator token: 403, no token: 401, suspended author's token: 401.

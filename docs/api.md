@@ -448,3 +448,31 @@ Articles of **suspended authors stay in the queue**; `author.status` says `Suspe
 **One decision per submission.** The article UPDATE only matches the `xmin` that was read and `reviews` has a unique index on `(article_id, submission_version)`. Of simultaneous approvals, rejections, or a decision against the author's withdrawal, exactly one succeeds; the others get 409 `This article has changed since you opened it. Refresh to see its current status.` and no second review row exists.
 
 Tests: `backend/tests/ContentReview.IntegrationTests/Reviews/ReviewQueueTests.cs`, `ReviewDecisionTests.cs`.
+
+## My articles (author)
+
+An author's overview of their **own** articles, published ones included. The author is always the session's user: nothing in the query can name another author (an `authorId` is ignored). Another author's published article is visible only through the published feed (F12). Administrator token: 403, no token: 401, suspended author's token: 401.
+
+| Method | Route | Success |
+|---|---|---|
+| GET | `/api/me/articles` | 200 paged `MyArticleItem` |
+| GET | `/api/me/articles/stats` | 200 `{ draft, pendingReview, published, rejected }` |
+
+### List
+
+Query: `search` (any part of the title, ignoring case, `%` and `_` literal, at most 150 characters), `status` (`Draft`, `PendingReview`, `Published`, `Rejected`), `categoryId`, `sort` (`updatedAt` default, `submittedAt`, `title`), `direction` (`asc`, `desc`; default `desc` for the dates, `asc` for the title), `page`, `pageSize` (default 20, at most 100). Ties are broken by id so pages never repeat or skip an article; sorting by `submittedAt` puts drafts that were never submitted last in both directions. A bad value is a 400.
+
+```json
+{ "items": [ { "id": "…", "title": "…", "category": { "id": "…", "name": "Science" },
+    "status": "Rejected", "updatedAt": "…", "submittedAt": "…", "publishedAt": null,
+    "latestRejectionReason": "…", "allowedActions": ["edit", "submit"], "version": 1234 } ],
+  "page": 1, "pageSize": 20, "totalCount": 1 }
+```
+
+`category` is `null` for a draft without one. `latestRejectionReason` is set only while the article is **Rejected** (the reason of its latest rejection) and is `null` otherwise. `allowedActions` comes from the lifecycle ([article-lifecycle.md](article-lifecycle.md)): Draft `edit, delete, submit`; PendingReview `withdraw`; Rejected `edit, submit`; Published none. The body and summary are not part of an item.
+
+### Stats
+
+Always all four statuses; one without articles is 0. One grouped query. Counts reflect a submit, withdraw, approve, reject or delete on the very next request.
+
+Tests: `backend/tests/ContentReview.IntegrationTests/Articles/MyArticlesTests.cs`.

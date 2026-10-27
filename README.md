@@ -27,6 +27,8 @@ cp .env.example .env                  # Windows PowerShell: Copy-Item .env.examp
 (cd frontend/author-portal && npm ci)
 ```
 
+To create the first administrator (needed to sign in to the Admin Portal), set `ADMIN_EMAIL` and `ADMIN_NAME` in `.env`, start the stack and run `scripts/provision-admin.sh` (or `scripts/provision-admin.ps1`). It asks for the password in a hidden prompt. See [docs/database.md](docs/database.md#provisioning-the-initial-administrator).
+
 ### Start and stop
 
 | | macOS / Linux | Windows (PowerShell) |

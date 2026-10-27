@@ -53,3 +53,43 @@ The API can also apply migrations at startup: set `Database__MigrateOnStartup=tr
 ## Guarding the schema
 
 Integration tests in `backend/tests/ContentReview.IntegrationTests/Schema` apply the migrations to a throwaway PostgreSQL (Testcontainers) and verify the tables, snake_case columns, column types, unique and supporting indexes, foreign key delete behavior, check constraints and the `xmin` concurrency token. They also prove the constraints reject bad data. `The_model_has_no_changes_missing_from_the_migrations` fails when the model changes without a new migration.
+
+## Provisioning the initial administrator
+
+The first administrator is created only by `db/scripts/provision-admin.sql`; public registration can never create administrators. The script takes three `psql` variables and has no values of its own:
+
+| Variable | Meaning |
+|---|---|
+| `admin_email` | Sign-in email (valid, max 254). Stored trimmed; the unique `normalized_email` is `lower(trim(email))` |
+| `admin_name` | Full name, 2-100 characters |
+| `admin_password_hash` | Identity V3 hash from `ContentReview.Tools hash-password` (see [password-hashing.md](password-hashing.md)) |
+
+Behavior:
+
+- Runs in one transaction with `ON_ERROR_STOP`. A missing or malformed variable raises an error (`psql` exits with 3) and nothing is written. Error messages never echo the hash.
+- No user with that normalized email: inserts an `Active` `Administrator` (`gen_random_uuid()` id, `now()` timestamps) and one `audit_events` row `AdministratorProvisioned` (no actor, `entity_type` `User`, details `{"email": ...}`; no password or hash).
+- A user with that email exists: nothing is inserted or updated. The script prints `NOTICE: Administrator already exists - no changes made` (or a `WARNING` naming the role when the existing user is not an administrator). The existing password is never overwritten.
+
+### Wrappers
+
+`scripts/provision-admin.sh` (macOS/Linux/Git Bash) and `scripts/provision-admin.ps1` (Windows PowerShell 5.1 / PowerShell 7) read `ADMIN_EMAIL` and `ADMIN_NAME` from `.env` (or `--email`/`--name`, `-Email`/`-Name`), ask for the password in the masked `hash-password` prompt, and run the SQL through `docker compose exec postgres psql`:
+
+```bash
+cp .env.example .env        # once; set ADMIN_EMAIL and ADMIN_NAME, leave the password out
+scripts/start.sh            # or: docker compose up -d
+scripts/provision-admin.sh
+```
+
+Options: `--connection` / `-Connection` (or `PSQL_CONNECTION`) runs the local `psql` client against another database instead of the container; `ADMIN_PASSWORD_HASH` skips the prompt when you already have a hash.
+
+Running `psql` directly:
+
+```bash
+HASH=$(dotnet run --project backend/tools/ContentReview.Tools -- hash-password)
+psql "$CONNECTION" -v ON_ERROR_STOP=1 -v admin_email="$ADMIN_EMAIL" -v admin_name="$ADMIN_NAME" \
+     -v admin_password_hash="$HASH" -f db/scripts/provision-admin.sql
+```
+
+The hash is passed as a command-line argument, so it is visible in the process list while `psql` runs; it is a salted one-way hash, but do not paste it into shared logs.
+
+Tests: `backend/tests/ContentReview.IntegrationTests/Scripts/ProvisionAdminScriptTests.cs` runs the script with `psql` against a migrated Testcontainers database (creation, audit event, idempotency and password preservation, existing non-administrator, invalid input writes nothing, no hash in error messages).

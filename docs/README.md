@@ -5,7 +5,7 @@ Placeholder index. Each document below is added by the story noted next to it; s
 | Document | Content | Added by |
 |---|---|---|
 | `architecture.md` | Components, dependency direction, runtime topology | F16 |
-| [`database.md`](database.md) | Tables, constraints, indexes, migrations | F01.4 (done) / F16 |
+| [`database.md`](database.md) | Tables, constraints, indexes, migrations, initial administrator script | F01.4 (done) / F02.2 (done) / F16 |
 | [`password-hashing.md`](password-hashing.md) | Shared password hashing service, password policy, `hash-password` CLI | F02.1 (done) |
 | `permissions.md` | Roles, policies, ownership rules | F03 / F16 |
 | `lifecycle.md` | Article lifecycle state machine and invitation states | F09 / F16 |

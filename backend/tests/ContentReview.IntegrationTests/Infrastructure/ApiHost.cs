@@ -40,6 +40,8 @@ public sealed class ApiHost : IAsyncDisposable
 
     public HttpClient Client => _client;
 
+    public IServiceProvider Services => Factory.Inner.Services;
+
     public static async Task<ApiHost> CreateAsync(PostgresFixture postgres, int loginAttemptsPerMinute = 1000)
     {
         var connectionString = await postgres.CreateDatabaseAsync();
@@ -56,6 +58,7 @@ public sealed class ApiHost : IAsyncDisposable
         {
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(clock);
+            services.AddControllers().AddApplicationPart(typeof(ApiHost).Assembly);
         }));
 
         return new ApiHost(baseFactory, new WebApplicationFactoryHolder(factory), connectionString, clock);

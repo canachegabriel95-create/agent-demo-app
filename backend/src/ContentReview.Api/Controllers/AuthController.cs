@@ -12,7 +12,8 @@ namespace ContentReview.Api.Controllers;
 [Route("api/auth")]
 public sealed class AuthController(
     CredentialsValidator credentials,
-    ISessionService sessions) : ControllerBase
+    ISessionService sessions,
+    ICurrentUser currentUser) : ControllerBase
 {
     public const string InvalidCredentialsTitle = "Invalid email or password.";
     public const string LoginRateLimitPolicy = "login";
@@ -49,7 +50,7 @@ public sealed class AuthController(
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Logout(CancellationToken cancellationToken)
     {
-        await sessions.RevokeAsync(Guid.Parse(User.FindFirstValue(SessionAuthentication.SessionIdClaim)!), cancellationToken);
+        await sessions.RevokeAsync(currentUser.SessionId, cancellationToken);
         return NoContent();
     }
 

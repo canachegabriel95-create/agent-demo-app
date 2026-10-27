@@ -5,9 +5,11 @@ using ContentReview.Api.Controllers;
 using ContentReview.Api.Health;
 using ContentReview.Api.Options;
 using ContentReview.Infrastructure;
+using ContentReview.Domain.Enums;
 using ContentReview.Infrastructure.Persistence;
 using ContentReview.Infrastructure.Sessions;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -44,7 +46,20 @@ builder.Services.AddScoped<CredentialsValidator>();
 builder.Services
     .AddAuthentication(SessionAuthentication.Scheme)
     .AddScheme<AuthenticationSchemeOptions, SessionAuthenticationHandler>(SessionAuthentication.Scheme, null);
-builder.Services.AddAuthorization();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, CurrentUser>();
+builder.Services.AddAuthorization(authorization =>
+{
+    authorization.AddPolicy(Policies.AdminOnly, policy => policy
+        .RequireAuthenticatedUser()
+        .RequireRole(UserRole.Administrator.ToString()));
+    authorization.AddPolicy(Policies.AuthorOnly, policy => policy
+        .RequireAuthenticatedUser()
+        .RequireRole(UserRole.Author.ToString()));
+
+    // Anything without an explicit [Authorize]/[AllowAnonymous] still requires a signed-in user.
+    authorization.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
+});
 
 // Login attempts are limited per client IP; the limit is configurable (Auth:LoginAttemptsPerMinute, default 10).
 builder.Services.AddRateLimiter(limiter =>
@@ -103,7 +118,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
 
-app.MapHealthChecks("/health", HealthResponseWriter.CreateOptions());
+app.MapHealthChecks("/health", HealthResponseWriter.CreateOptions()).AllowAnonymous();
 app.MapControllers();
 
 app.Run();

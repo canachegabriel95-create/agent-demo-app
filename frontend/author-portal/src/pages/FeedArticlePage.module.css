@@ -1,0 +1,25 @@
+.root {
+  max-width: 48rem;
+}
+
+.title {
+  margin-bottom: 0.25rem;
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  margin: 0 0 1rem;
+  color: var(--color-muted);
+}
+
+.summary {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

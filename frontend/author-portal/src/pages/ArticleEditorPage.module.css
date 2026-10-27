@@ -1,0 +1,113 @@
+.root {
+  max-width: 48rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+}
+
+.rules {
+  margin: 0 0 1rem;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.field {
+  margin-bottom: 1rem;
+}
+
+.label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+
+.select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.mono textarea {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.primary,
+.secondary {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.primary {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  font-weight: 600;
+}
+
+.primary:disabled,
+.secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.success {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-success);
+  border-radius: var(--radius);
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.alert {
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.alert p {
+  margin: 0 0 0.5rem;
+}
+
+.alert p:last-child {
+  margin-bottom: 0;
+}
+
+.copy {
+  width: 100%;
+  min-height: 8rem;
+  margin: 0.5rem 0 1rem;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}

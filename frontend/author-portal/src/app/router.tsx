@@ -1,6 +1,7 @@
 import { createBrowserRouter, type RouteObject } from 'react-router-dom';
 import { AuthProvider } from '../auth/AuthProvider';
 import { RequireAuth } from '../auth/RequireAuth';
+import { ArticleEditorPage } from '../pages/ArticleEditorPage';
 import { ComingSoonPage } from '../pages/ComingSoonPage';
 import { HomePage } from '../pages/HomePage';
 import { LoginPage } from '../pages/LoginPage';
@@ -27,6 +28,9 @@ export const appRoutes: RouteObject[] = [
         children: [
           { index: true, element: <HomePage /> },
           { path: 'articles', element: <ComingSoonPage title="My Articles" /> },
+          { path: 'articles/new', element: <ArticleEditorPage /> },
+          { path: 'articles/:id/edit', element: <ArticleEditorPage /> },
+          { path: 'articles/:id', element: <ComingSoonPage title="Article" /> },
           { path: 'feed', element: <ComingSoonPage title="Feed" /> },
           { path: 'profile', element: <ProfilePage /> },
           { path: '*', element: <NotFoundPage /> },

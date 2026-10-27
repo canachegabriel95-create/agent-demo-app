@@ -291,3 +291,15 @@ An author reads and changes their **own** profile. Both routes need an Author to
 
 Tests: `backend/tests/ContentReview.IntegrationTests/Me/AuthorProfileTests.cs`.
 
+## Categories
+
+`GET /api/categories` lists the article categories for the editor (author) and for filters (both portals).
+
+- **Who:** any signed-in user, administrator or author. No token: 401. A suspended author's token: 401.
+- **Response:** 200 `[{ "id": "…", "name": "Technology", "slug": "technology" }, …]`, in display order (`sort_order`): Technology, Science, Business, Health, Culture, Education.
+- **Caching:** `Cache-Control: private, max-age=300`. The list never changes while the application runs, so the browser may reuse it for five minutes; `private` keeps it out of shared caches because the request carries a token.
+- **Read-only:** there is no endpoint that creates, edits or deletes a category (`POST`, `PUT`, `PATCH` and `DELETE` on `/api/categories`, `/api/categories/{id}` and `/api/admin/categories` all answer 404 or 405). The data is described in [database.md](database.md#seed-data-categories).
+- **Frontend:** both portals have `useCategories()` (`src/hooks/useCategories.ts`), which returns `{ status, categories, byId, error, reload }` with `status` `loading`, `ready` or `error`.
+
+Tests: `backend/tests/ContentReview.IntegrationTests/Categories/CategoriesTests.cs`, `useCategories.test.tsx` in each portal.
+

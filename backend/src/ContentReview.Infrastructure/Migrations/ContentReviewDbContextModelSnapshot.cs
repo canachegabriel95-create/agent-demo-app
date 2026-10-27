@@ -247,6 +247,50 @@ namespace ContentReview.Infrastructure.Migrations
                         .HasDatabaseName("ix_categories_slug");
 
                     b.ToTable("categories", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("0197a000-0000-7000-8000-000000000001"),
+                            Name = "Technology",
+                            Slug = "technology",
+                            SortOrder = 1
+                        },
+                        new
+                        {
+                            Id = new Guid("0197a000-0000-7000-8000-000000000002"),
+                            Name = "Science",
+                            Slug = "science",
+                            SortOrder = 2
+                        },
+                        new
+                        {
+                            Id = new Guid("0197a000-0000-7000-8000-000000000003"),
+                            Name = "Business",
+                            Slug = "business",
+                            SortOrder = 3
+                        },
+                        new
+                        {
+                            Id = new Guid("0197a000-0000-7000-8000-000000000004"),
+                            Name = "Health",
+                            Slug = "health",
+                            SortOrder = 4
+                        },
+                        new
+                        {
+                            Id = new Guid("0197a000-0000-7000-8000-000000000005"),
+                            Name = "Culture",
+                            Slug = "culture",
+                            SortOrder = 5
+                        },
+                        new
+                        {
+                            Id = new Guid("0197a000-0000-7000-8000-000000000006"),
+                            Name = "Education",
+                            Slug = "education",
+                            SortOrder = 6
+                        });
                 });
 
             modelBuilder.Entity("ContentReview.Domain.Entities.Invitation", b =>

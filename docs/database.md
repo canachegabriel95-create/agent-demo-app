@@ -18,7 +18,7 @@ PostgreSQL 17, database `content_review`. The schema is owned by EF Core migrati
 | `users` | Administrators and authors | unique `normalized_email`; index `(role, status)`; checks on `role`, `status` |
 | `user_sessions` | Login sessions (only the SHA-256 token hash is stored) | unique `token_hash`; index `user_id`; FK to `users` **cascade** |
 | `invitations` | Registration invitations | unique `code`; index `normalized_email`; unique `used_by_user_id` **where not null** (an account consumes at most one invitation); FKs to `users` restrict |
-| `categories` | Article categories (seeded later) | unique `name`; unique `slug` |
+| `categories` | Article categories (seeded by the `SeedCategories` migration, see below) | unique `name`; unique `slug` |
 | `articles` | Articles and their current state | index `(author_id, status)`; index `(status, submitted_at)`; check on `status`; FKs to `users` and `categories` restrict |
 | `article_submissions` | Snapshot of each submission | unique `(article_id, version)`; FK to `articles` **cascade** |
 | `reviews` | Review decisions | unique `(article_id, submission_version)` (a submission can be reviewed only once, which makes racing reviews safe); check on `decision`; FKs restrict |
@@ -27,6 +27,21 @@ PostgreSQL 17, database `content_review`. The schema is owned by EF Core migrati
 Delete behavior: every foreign key is `RESTRICT`, except `user_sessions.user_id` and `article_submissions.article_id`, which cascade.
 
 EF Core also adds plain indexes on foreign key columns that have no other index (for example `articles.category_id`, `reviews.reviewer_id`).
+
+## Seed data: categories
+
+The `SeedCategories` migration inserts the six article categories. The list is fixed in this version: nothing in the application creates, edits or deletes a category, and the ids never change, so every database (and every test run) is identical.
+
+| `sort_order` | `name` | `slug` | `id` |
+|---|---|---|---|
+| 1 | Technology | `technology` | `0197a000-0000-7000-8000-000000000001` |
+| 2 | Science | `science` | `0197a000-0000-7000-8000-000000000002` |
+| 3 | Business | `business` | `0197a000-0000-7000-8000-000000000003` |
+| 4 | Health | `health` | `0197a000-0000-7000-8000-000000000004` |
+| 5 | Culture | `culture` | `0197a000-0000-7000-8000-000000000005` |
+| 6 | Education | `education` | `0197a000-0000-7000-8000-000000000006` |
+
+The rows are declared once in `CategorySeed` (`ContentReview.Infrastructure/Persistence`) and written by EF Core `HasData`. The migration was added after the initial schema was applied, so an existing database gets the rows by running `dotnet ef database update`; the first migration was not touched. To add a category later, add it to `CategorySeed` with a new id and create a new migration.
 
 ## Migrations
 

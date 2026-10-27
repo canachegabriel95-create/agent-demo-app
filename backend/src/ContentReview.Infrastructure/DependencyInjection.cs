@@ -1,6 +1,7 @@
 using ContentReview.Domain.Auditing;
 using ContentReview.Domain.Security;
 using ContentReview.Infrastructure.Auditing;
+using ContentReview.Infrastructure.Categories;
 using ContentReview.Infrastructure.Invitations;
 using ContentReview.Infrastructure.Registration;
 using ContentReview.Infrastructure.Users;
@@ -50,6 +51,7 @@ public static class DependencyInjection
         services.AddScoped<IUserDirectoryService, UserDirectoryService>();
         services.AddScoped<IUserManagementService, UserManagementService>();
         services.AddScoped<IAuthorProfileService, AuthorProfileService>();
+        services.AddScoped<ICategoryService, CategoryService>();
 
         return services;
     }

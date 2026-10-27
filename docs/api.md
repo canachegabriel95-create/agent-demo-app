@@ -502,3 +502,32 @@ Query of the list: `search` (any part of the title, ignoring case, `%` and `_` l
 The detail has the same fields plus `body`.
 
 Tests: `backend/tests/ContentReview.IntegrationTests/Articles/FeedTests.cs`.
+
+## Dashboard and audit history (administrator)
+
+Administrator token only: an Author token is 403, no token 401. Read-only: POST, PUT, PATCH and DELETE are 405 (or 404 on a path that does not exist); nothing here changes a counter or an audit event.
+
+| Method | Route | Success |
+|---|---|---|
+| GET | `/api/admin/dashboard` | 200 `{ activeAuthors, suspendedAuthors, availableInvitations, pendingReviews, publishedArticles }` |
+| GET | `/api/admin/audit-events` | 200 paged `AuditEventItem` |
+| GET | `/api/admin/audit-events/actions` | 200 list of action names |
+
+### Dashboard
+
+Counted from the database on every request. Users are **authors only** (administrators are not counted). `availableInvitations` uses the derived status rule: not used, not revoked, `expires_at > now` (an invitation stops counting the moment it expires). `pendingReviews` is the number of articles in PendingReview, `publishedArticles` the number in Published.
+
+### Audit events
+
+Query: `action` (repeat it for several: `?action=UserSuspended&action=UserReactivated`; an unknown name is a 400), `actorId`, `from` (inclusive) and `to` (exclusive) as ISO 8601 with an offset (e.g. `2026-10-27T00:00:00Z`; an unreadable date or `from` after `to` is a 400 naming the field), `page`, `pageSize` (default 20, at most 100). Newest first; events with the same time are ordered by id so pages never repeat or skip.
+
+```json
+{ "items": [ { "id": "…", "occurredAt": "…", "action": "UserSuspended",
+    "actor": { "id": "…", "fullName": "Alice Admin", "role": "Administrator" },
+    "entityType": "User", "entityId": "…", "details": { "reason": "…" }, "correlationId": "…" } ],
+  "page": 1, "pageSize": 20, "totalCount": 1 }
+```
+
+`actor` is `null` for events written by the system (the administrator provisioning script); `correlationId` is `null` for events written outside a request. `details` is what [audit.md](audit.md) says is recorded: never passwords, hashes, tokens or full invitation codes. `/actions` returns every action name (`AuditActions.All`), for a filter.
+
+Tests: `backend/tests/ContentReview.IntegrationTests/Admin/AdminDashboardTests.cs`, `AuditHistoryTests.cs`.

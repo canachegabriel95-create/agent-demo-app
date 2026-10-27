@@ -148,6 +148,27 @@ public class SwaggerTests
 
     // ---- content ----
 
+    [Theory]
+    [InlineData("/api/articles/{articleId}/revision", "post", "Articles", new[] { "201", "401", "403", "404", "409" })]
+    [InlineData("/api/articles/{articleId}/revision", "put", "Articles", new[] { "200", "400", "404", "409" })]
+    [InlineData("/api/articles/{articleId}/revision/submit", "post", "Articles", new[] { "200", "400", "404", "409" })]
+    [InlineData("/api/articles/{articleId}/revision/withdraw", "post", "Articles", new[] { "200", "404", "409" })]
+    [InlineData("/api/admin/revisions/{id}", "get", "Admin – Reviews", new[] { "200", "403", "404" })]
+    [InlineData("/api/admin/revisions/{id}/approve", "post", "Admin – Reviews", new[] { "200", "400", "403", "404", "409" })]
+    [InlineData("/api/admin/revisions/{id}/reject", "post", "Admin – Reviews", new[] { "200", "400", "403", "404", "409" })]
+    public async Task The_revision_endpoints_are_documented_with_their_status_codes(
+        string path, string method, string tag, string[] statuses)
+    {
+        await using var factory = Host("Development");
+        var document = await DocumentAsync(factory);
+
+        var operation = Operation(document, path, method);
+
+        Assert.Equal(tag, operation.GetProperty("tags")[0].GetString());
+        var responses = operation.GetProperty("responses").EnumerateObject().Select(r => r.Name);
+        Assert.All(statuses, status => Assert.Contains(status, responses));
+    }
+
     [Fact]
     public async Task Operations_are_grouped_by_the_documented_tags()
     {

@@ -15,11 +15,13 @@ public static class ApiTags
         ["AdminInvitations"] = "Admin – Invitations",
         ["AdminUsers"] = "Admin – Users",
         ["AdminReviews"] = "Admin – Reviews",
+        ["AdminRevisions"] = "Admin – Reviews",
         ["AdminDashboard"] = "Admin – Dashboard & Audit",
         ["AuditEvents"] = "Admin – Dashboard & Audit",
         ["Me"] = "Me",
         ["MyArticles"] = "Me",
         ["Articles"] = "Articles",
+        ["ArticleRevisions"] = "Articles",
         ["Feed"] = "Feed",
         ["Categories"] = "Categories",
     };

@@ -1,6 +1,6 @@
 import { EmptyState } from '../components';
 
-/** Placeholder for sections whose pages arrive with later stories (My Articles, Feed, Profile). */
+/** Placeholder for sections whose pages arrive with later stories (My Articles, Feed). */
 export function ComingSoonPage({ title }: { title: string }) {
   return (
     <>

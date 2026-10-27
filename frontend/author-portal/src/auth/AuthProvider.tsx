@@ -73,9 +73,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus('anonymous');
   }, []);
 
+  const updateUser = useCallback((changes: Partial<Pick<AuthUser, 'fullName'>>) => {
+    setUser((current) => (current ? { ...current, ...changes } : current));
+  }, []);
+
   const value = useMemo<AuthContextValue>(
-    () => ({ status, user, sessionExpired, signIn, signOut }),
-    [status, user, sessionExpired, signIn, signOut],
+    () => ({ status, user, sessionExpired, signIn, signOut, updateUser }),
+    [status, user, sessionExpired, signIn, signOut, updateUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

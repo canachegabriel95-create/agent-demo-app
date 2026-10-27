@@ -74,7 +74,6 @@ describe('navigation', () => {
   it.each([
     ['My Articles', '/articles'],
     ['Feed', '/feed'],
-    ['Profile', '/profile'],
   ])('opens %s from the navigation (page arrives in a later story)', async (name, path) => {
     stubSignedInApi();
     const router = renderAt('/');

@@ -179,3 +179,37 @@ await transaction.CommitAsync(ct);
 - Codes are normalized (trimmed, upper-cased, dashes optional); the email is normalized with `Trim().ToLowerInvariant()`. "Now" comes from the injected `TimeProvider`, not the database clock, so tests control it.
 
 Tests: `backend/tests/ContentReview.IntegrationTests/Invitations/InvitationRedemptionTests.cs` (10 parallel consumptions give exactly one winner; every reason; rollback; endpoint and rate limit).
+
+## Users (administrator)
+
+Administrators look up author accounts. Both routes need an Administrator token (no token: 401, Author token: 403). **Administrators are never listed or returned**: their ids give 404 like unknown ids.
+
+| Method | Route | Success |
+|---|---|---|
+| GET | `/api/admin/users` | 200 paged `{ items, page, pageSize, totalCount }` |
+| GET | `/api/admin/users/{id}` | 200 author details |
+
+### List
+
+Query: `search`, `status` (`Active` or `Suspended`), `sort` (`registeredAt` default, or `fullName`), `direction` (`asc` or `desc`; defaults to `desc` for `registeredAt`, so newest first, and `asc` for `fullName`), `page` (from 1), `pageSize` (1-100, default 20). An invalid value is a 400 with `errors`.
+
+- **Search** matches any part of the full name or of the email, ignoring case (`ILIKE` on `full_name` and `normalized_email`). `%`, `_` and `\` in the search text are ordinary characters: searching `100%` finds only names that contain `100%`. At most 100 characters.
+- Equal sort values are ordered by id, so paging never repeats or skips an author.
+- Item: `{ id, fullName, email, status, registeredAt }`. No password data is ever returned.
+
+### Details
+
+```json
+{
+  "id": "…", "fullName": "Ann Author", "email": "ann@demo.local", "bio": "…", "role": "Author",
+  "status": "Suspended", "registeredAt": "…", "suspendedAt": "…", "suspensionReason": "…",
+  "articleCounts": { "draft": 3, "pendingReview": 1, "published": 2, "rejected": 1 },
+  "version": 1234
+}
+```
+
+The four counts come from one grouped query; statuses with no articles are `0`. `version` is the concurrency token the edit and suspension endpoints (F06.2, F06.3) expect.
+
+Indexes: the list filters on role and status, which `users (role, status)` already covers (created with the initial schema). A trigram index for the contains-search was not added: the platform is local with small data, and `ILIKE '%…%'` is fast enough there. If the user table ever grows large, add `pg_trgm` GIN indexes on `full_name` and `normalized_email` with a new migration.
+
+Tests: `backend/tests/ContentReview.IntegrationTests/Users/AdminUsersTests.cs`.

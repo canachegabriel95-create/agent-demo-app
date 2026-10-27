@@ -55,3 +55,15 @@ Tokens and passwords are never logged; the API does not log request headers or b
 ## Tests
 
 `backend/tests/ContentReview.IntegrationTests/Auth` (login per portal, identical 401s, malformed requests, token stored only as a hash, logout, expiry with a fake clock, suspension, last-seen throttling, rate limit) and `Scripts/AdminProvisioningTests.cs` (an administrator created by `provision-admin.sql` can log in with `portal=Admin`, not `Author`). Domain behavior: `UserSessionTests`.
+
+## Admin Portal
+
+`frontend/admin-portal` signs in through these endpoints (story F03.3):
+
+- **Session:** the token is kept in `sessionStorage` under `cr.admin.session` (so it ends with the browser tab) and sent as `Authorization: Bearer` by `apiFetch`. On start `AuthProvider` validates a stored token with `GET /api/auth/me`; while that runs, protected pages show "Checking your session…".
+- **Route guard:** `RequireAuth` wraps every page except `/login`, unknown paths included. An anonymous visitor is sent to `/login?returnUrl=<path>`. After signing in the portal goes to `returnUrl`, but only if it is a relative in-app path (`auth/returnUrl.ts` rejects absolute URLs, `//host`, backslashes, control characters and the login page itself, falling back to `/`).
+- **Login form:** `portal: "Admin"`; fields are required before any request; the button and fields are disabled while the request runs. A `401` always shows "Invalid email or password." in a `role="alert"` region (`data-testid="login-error"`), whatever the cause, so an Author account looks like a wrong password. `429` asks the user to wait; other failures show a neutral message.
+- **Expiry:** a `401` on any request that carried a token (expired, revoked, suspended) clears the stored token, signs the user out and shows "Your session has expired. Please sign in again." on the login page. A failed sign-in is not treated as expiry.
+- **Logout:** the header shows the administrator's name and a "Log out" button (`data-testid="logout-button"`). It calls `POST /api/auth/logout`, clears the token and goes to `/login`, even if that call fails.
+
+Tests: `src/auth/auth.test.tsx`, `src/auth/returnUrl.test.ts`, `src/app/router.test.tsx`.

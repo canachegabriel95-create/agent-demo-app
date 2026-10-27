@@ -55,4 +55,60 @@ public class PasswordPolicyTests
     {
         Assert.Equal(PasswordPolicy.Rules.Count - 1, PasswordPolicy.Validate("short").Count);
     }
+
+    [Theory]
+    [MemberData(nameof(SharedCases))]
+    public void Check_matches_the_shared_fixture(PasswordFixture.Case testCase)
+    {
+        var violations = PasswordPolicy.Check(testCase.Password).Select(rule => rule.ToString());
+
+        Assert.Equal(testCase.Violations, violations);
+        Assert.Equal(testCase.Violations.Length == 0, PasswordPolicy.IsValid(testCase.Password));
+    }
+
+    public static TheoryData<PasswordFixture.Case> SharedCases() => PasswordFixture.Cases();
+
+    [Fact]
+    public void The_fixture_covers_every_rule()
+    {
+        var covered = PasswordFixture.Load().SelectMany(c => c.Violations).ToHashSet();
+
+        Assert.Equal(Enum.GetNames<PasswordRule>().ToHashSet(), covered);
+    }
+
+    [Fact]
+    public void Rules_are_checked_in_declaration_order()
+    {
+        Assert.Equal(
+            [PasswordRule.TooShort, PasswordRule.MissingUppercase, PasswordRule.MissingDigit, PasswordRule.MissingSymbol],
+            PasswordPolicy.Check("short"));
+    }
+
+    [Theory]
+    [InlineData(PasswordRule.TooShort, 0)]
+    [InlineData(PasswordRule.TooLong, 0)]
+    [InlineData(PasswordRule.MissingUppercase, 1)]
+    [InlineData(PasswordRule.MissingLowercase, 2)]
+    [InlineData(PasswordRule.MissingDigit, 3)]
+    [InlineData(PasswordRule.MissingSymbol, 4)]
+    public void Every_rule_has_its_sentence(PasswordRule rule, int index)
+    {
+        Assert.Equal(PasswordPolicy.Rules[index], PasswordPolicy.Describe(rule));
+    }
+
+    [Fact]
+    public void Validate_never_repeats_a_sentence()
+    {
+        // A 200-character password of lower-case letters breaks TooLong only through the length sentence.
+        var violations = PasswordPolicy.Validate(new string('a', 200));
+
+        Assert.Equal(violations.Distinct().Count(), violations.Count);
+        Assert.Contains(PasswordPolicy.Rules[0], violations);
+    }
+
+    [Fact]
+    public void White_space_is_not_a_symbol()
+    {
+        Assert.Equal([PasswordRule.MissingSymbol], PasswordPolicy.Check("Str0ng Passw0rd"));
+    }
 }

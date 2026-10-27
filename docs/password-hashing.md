@@ -9,7 +9,9 @@ The service is registered by `AddInfrastructure()` as a singleton.
 Defined once in `PasswordPolicy` (Domain) and enforced by the CLI (and by registration, F05):
 
 - 12-128 characters
-- at least one uppercase letter, one lowercase letter, one digit and one symbol (a character that is neither a letter nor a digit)
+- at least one uppercase letter, one lowercase letter, one digit and one symbol (a character that is not a letter, a digit or white space)
+
+The rules, their names and the Author Portal mirror are described in [business-rules.md](business-rules.md#passwords).
 
 ## Generating a hash
 

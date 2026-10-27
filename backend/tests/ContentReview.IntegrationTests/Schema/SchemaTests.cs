@@ -16,8 +16,8 @@ public partial class SchemaTests(PostgresFixture postgres) : IAsyncLifetime
 
     private static readonly string[] ExpectedTables =
     [
-        "article_submissions", "articles", "audit_events", "categories",
-        "invitations", "reviews", "user_sessions", "users",
+        "article_published_versions", "article_revisions", "article_submissions", "articles", "audit_events", "categories",
+        "invitations", "reviews", "revision_reviews", "user_sessions", "users",
     ];
 
     [Fact]
@@ -70,9 +70,12 @@ public partial class SchemaTests(PostgresFixture postgres) : IAsyncLifetime
             ["user_sessions"] = ["id", "user_id", "token_hash", "created_at", "expires_at", "revoked_at", "last_seen_at"],
             ["invitations"] = ["id", "code", "email", "normalized_email", "created_by_user_id", "created_at", "expires_at", "revoked_at", "revoked_by_user_id", "used_at", "used_by_user_id"],
             ["categories"] = ["id", "name", "slug", "sort_order"],
-            ["articles"] = ["id", "author_id", "category_id", "title", "summary", "body", "status", "submission_version", "submitted_at", "published_at", "created_at", "updated_at"],
+            ["articles"] = ["id", "author_id", "category_id", "title", "summary", "body", "status", "submission_version", "published_version", "submitted_at", "published_at", "created_at", "updated_at"],
             ["article_submissions"] = ["id", "article_id", "version", "title", "summary", "body", "category_id", "submitted_at", "withdrawn_at"],
             ["reviews"] = ["id", "article_id", "submission_version", "reviewer_id", "decision", "reason", "decided_at"],
+            ["article_revisions"] = ["id", "article_id", "number", "category_id", "title", "summary", "body", "status", "submission_version", "submitted_at", "withdrawn_at", "approved_at", "created_at", "updated_at"],
+            ["revision_reviews"] = ["id", "revision_id", "submission_version", "reviewer_id", "decision", "reason", "decided_at"],
+            ["article_published_versions"] = ["id", "article_id", "version", "title", "summary", "body", "category_id", "published_at", "superseded_at"],
             ["audit_events"] = ["id", "occurred_at", "actor_user_id", "action", "entity_type", "entity_id", "details", "correlation_id"],
         };
 
@@ -93,6 +96,9 @@ public partial class SchemaTests(PostgresFixture postgres) : IAsyncLifetime
     [InlineData("categories", "slug")]
     [InlineData("article_submissions", "article_id,version")]
     [InlineData("reviews", "article_id,submission_version")]
+    [InlineData("article_revisions", "article_id,number")]
+    [InlineData("revision_reviews", "revision_id,submission_version")]
+    [InlineData("article_published_versions", "article_id,version")]
     public async Task Unique_indexes_exist(string table, string columns)
     {
         var index = await FindIndexAsync(table, columns);
@@ -109,6 +115,15 @@ public partial class SchemaTests(PostgresFixture postgres) : IAsyncLifetime
         Assert.NotNull(index);
         Assert.True(index.IsUnique);
         Assert.Equal("(used_by_user_id IS NOT NULL)", index.Predicate);
+    }
+
+    [Fact]
+    public async Task Only_one_open_revision_per_article_is_allowed()
+    {
+        var index = await FindIndexAsync("article_revisions", "article_id");
+
+        Assert.NotNull(index);
+        Assert.Equal("(status <> 'Approved'::text)", index.Predicate);
     }
 
     [Theory]
@@ -143,6 +158,11 @@ public partial class SchemaTests(PostgresFixture postgres) : IAsyncLifetime
     [InlineData("invitations", "used_by_user_id", "users", "RESTRICT")]
     [InlineData("reviews", "article_id", "articles", "RESTRICT")]
     [InlineData("reviews", "reviewer_id", "users", "RESTRICT")]
+    [InlineData("article_revisions", "article_id", "articles", "RESTRICT")]
+    [InlineData("article_revisions", "category_id", "categories", "RESTRICT")]
+    [InlineData("revision_reviews", "revision_id", "article_revisions", "RESTRICT")]
+    [InlineData("revision_reviews", "reviewer_id", "users", "RESTRICT")]
+    [InlineData("article_published_versions", "article_id", "articles", "RESTRICT")]
     [InlineData("audit_events", "actor_user_id", "users", "RESTRICT")]
     public async Task Foreign_keys_use_the_specified_delete_behavior(string table, string column, string referenced, string onDelete)
     {
@@ -162,6 +182,8 @@ public partial class SchemaTests(PostgresFixture postgres) : IAsyncLifetime
     [InlineData("users", "status", "'Active'", "'Suspended'")]
     [InlineData("articles", "status", "'Draft'", "'PendingReview'", "'Published'", "'Rejected'")]
     [InlineData("reviews", "decision", "'Approved'", "'Rejected'")]
+    [InlineData("article_revisions", "status", "'Draft'", "'PendingReview'", "'Rejected'", "'Approved'")]
+    [InlineData("revision_reviews", "decision", "'Approved'", "'Rejected'")]
     public async Task Enum_columns_have_check_constraints_listing_the_allowed_values(string table, string column, params string[] values)
     {
         var definitions = await QueryAsync<string>($"""
@@ -176,9 +198,9 @@ public partial class SchemaTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Concurrency_tokens_use_the_xmin_system_column_on_the_three_versioned_tables()
+    public async Task Concurrency_tokens_use_the_xmin_system_column_on_the_versioned_tables()
     {
-        foreach (var table in new[] { "users", "invitations", "articles" })
+        foreach (var table in new[] { "users", "invitations", "articles", "article_revisions" })
         {
             var xmin = await QueryAsync<long>($"SELECT COUNT(*) FROM (SELECT xmin FROM {table} LIMIT 1) t");
             Assert.Single(xmin);
@@ -187,14 +209,14 @@ public partial class SchemaTests(PostgresFixture postgres) : IAsyncLifetime
         using var db = _database.NewContext();
         var entityTypes = db.Model.GetEntityTypes().ToDictionary(e => e.GetTableName()!, e => e);
 
-        foreach (var table in new[] { "users", "invitations", "articles" })
+        foreach (var table in new[] { "users", "invitations", "articles", "article_revisions" })
         {
             var version = entityTypes[table].FindProperty("Version")!;
             Assert.True(version.IsConcurrencyToken, $"{table}.Version should be a concurrency token");
             Assert.Equal("xmin", version.GetColumnName());
         }
 
-        foreach (var table in new[] { "user_sessions", "categories", "article_submissions", "reviews", "audit_events" })
+        foreach (var table in new[] { "user_sessions", "categories", "article_submissions", "reviews", "revision_reviews", "article_published_versions", "audit_events" })
         {
             Assert.DoesNotContain(entityTypes[table].GetProperties(), p => p.IsConcurrencyToken);
         }

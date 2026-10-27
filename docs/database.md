@@ -8,7 +8,7 @@ PostgreSQL 17, database `content_review`. The schema is owned by EF Core migrati
 - Primary keys are `uuid`, generated in code with `Guid.CreateVersion7()`.
 - Timestamps are `timestamptz`, always UTC.
 - Enums are stored by name as `text`, each with a `CHECK` constraint listing the allowed values.
-- `users`, `invitations` and `articles` use the PostgreSQL system column `xmin` as the optimistic concurrency token. It is mapped to the `Version` property (`uint`) and exposed to API clients as `version`. `xmin` is a system column, so it does not appear in the migration SQL.
+- `users`, `invitations`, `articles` and `article_revisions` use the PostgreSQL system column `xmin` as the optimistic concurrency token. It is mapped to the `Version` property (`uint`) and exposed to API clients as `version`. `xmin` is a system column, so it does not appear in the migration SQL.
 - `InvitationStatus` is **not** stored. It is derived: Used and Revoked win, otherwise Expired when `expires_at <= now`, otherwise Available (`Invitation.GetStatus`).
 
 ## Tables
@@ -19,9 +19,12 @@ PostgreSQL 17, database `content_review`. The schema is owned by EF Core migrati
 | `user_sessions` | Login sessions (only the SHA-256 token hash is stored) | unique `token_hash`; index `user_id`; FK to `users` **cascade** |
 | `invitations` | Registration invitations | unique `code`; index `normalized_email`; unique `used_by_user_id` **where not null** (an account consumes at most one invitation); FKs to `users` restrict |
 | `categories` | Article categories (seeded by the `SeedCategories` migration, see below) | unique `name`; unique `slug` |
-| `articles` | Articles and their current state | index `(author_id, status)`; index `(status, submitted_at)`; check on `status`; FKs to `users` and `categories` restrict |
+| `articles` | Articles and their current state; `published_version` is 0 until first published, 1 after the first approval, plus one per approved revision | index `(author_id, status)`; index `(status, submitted_at)`; check on `status`; FKs to `users` and `categories` restrict |
 | `article_submissions` | Snapshot of each submission; `withdrawn_at` is set when the author takes it back (migration `AddSubmissionWithdrawnAt`) | unique `(article_id, version)`; FK to `articles` **cascade** |
 | `reviews` | Review decisions | unique `(article_id, submission_version)` (a submission can be reviewed only once, which makes racing reviews safe); check on `decision`; FKs restrict |
+| `article_revisions` | An edit of a **published** article, kept apart from it until an administrator approves it (migration `AddArticleRevisions`). Own content, `status` (`Draft`, `PendingReview`, `Rejected`, `Approved`), `submission_version`, `submitted_at`, `withdrawn_at`, `approved_at`; `xmin` is its `version` | unique `(article_id, number)`; **unique `article_id` where `status <> 'Approved'`** (at most one open revision per article, which makes racing "create revision" calls safe); index `(status, submitted_at)`; check on `status`; FKs restrict |
+| `revision_reviews` | Review decisions on revisions, never overwritten, so history survives rejection, resubmission and approval | unique `(revision_id, submission_version)` (a submission of a revision is decided once, which makes racing decisions safe); check on `decision`; FKs restrict |
+| `article_published_versions` | The published versions an approved revision replaced (the version that is live is the article itself) | unique `(article_id, version)`; FKs restrict |
 | `audit_events` | Audit trail (`details` is `jsonb`) | index `occurred_at DESC`; index `action`; index `actor_user_id`; FK to `users` restrict |
 
 Delete behavior: every foreign key is `RESTRICT`, except `user_sessions.user_id` and `article_submissions.article_id`, which cascade.

@@ -383,3 +383,51 @@ A 400 lists every broken field (`errors.title|summary|body|categoryId`, plus `er
 `GET /api/articles/{id}/reviews` returns the administrators' decisions on the article's submissions, newest submission first: `[{ "submissionVersion": 2, "decision": "Approved", "reason": null, "decidedAt": "…" }, …]`. `reason` is set for rejections. **Who decided is never returned to authors.** An article with no decision yet returns `[]`. Somebody else's article, or an unknown id, is the same 404 as everywhere else (administrator token: 403, no token: 401).
 
 Tests: `backend/tests/ContentReview.IntegrationTests/Articles/ArticleSubmissionTests.cs`, `ArticleReviewsTests.cs`.
+
+## Review queue (administrator)
+
+Administrators read what is waiting for review and open one submission in detail. All routes need an Administrator token (author token: 403, no token: 401). Deciding (approve / reject) arrives with F10.2; there is no endpoint that edits an article's content.
+
+| Method | Route | Success |
+|---|---|---|
+| GET | `/api/admin/reviews/queue` | 200 paged `ReviewQueueItem` |
+| GET | `/api/admin/articles/{id}` | 200 `ReviewArticleDetails` |
+| GET | `/api/admin/authors/lookup?search=` | 200 `[{ id, fullName }]` |
+
+### Queue
+
+Only `PendingReview` articles. Query: `authorId`, `categoryId`, `sort=submittedAt` (the only key), `direction=asc|desc` (default **asc**: oldest submission first), `page` (from 1), `pageSize` (default 20, at most 100). Ties on the submission time are broken by id, so pages never repeat or skip an article. A bad value is a 400.
+
+```json
+{ "items": [ { "articleId": "…", "title": "…", "category": { "id": "…", "name": "Science" },
+    "author": { "id": "…", "fullName": "Ann Author", "status": "Active" },
+    "submittedAt": "…", "submissionVersion": 1 } ],
+  "page": 1, "pageSize": 20, "totalCount": 1 }
+```
+
+Articles of **suspended authors stay in the queue**; `author.status` says `Suspended` so the portal can mark them. Content (summary, body) is not part of a queue item.
+
+### Detail
+
+`GET /api/admin/articles/{id}` works for any article that has been submitted at least once, in any status, read-only:
+
+```json
+{ "id": "…", "title": "…", "summary": "…", "body": "…", "category": { "id": "…", "name": "…" },
+  "status": "PendingReview", "submissionVersion": 2, "submittedAt": "…", "publishedAt": null,
+  "author": { "id": "…", "fullName": "…", "email": "…", "status": "Active" },
+  "reviewHistory": [ { "submissionVersion": 1, "decision": "Rejected", "reason": "…", "decidedAt": "…",
+                       "reviewer": { "id": "…", "fullName": "…" } } ],
+  "canReview": true, "reviewBlockedReason": null, "version": 1234 }
+```
+
+- **Content is the submission snapshot** (`article_submissions` for the current `submissionVersion`), so the administrator reviews exactly what was submitted even if the author has edited the article since.
+- `reviewHistory` has every decision, newest submission first, with the reviewer (administrators see who decided; authors never do).
+- `canReview` is true only while the article is PendingReview **and** its author is Active. Otherwise `reviewBlockedReason` says why: `Author account is suspended.` or `Article is not pending review (status X).`
+- `version` is the token to send with the decision (F10.2).
+- An article that was **never submitted** is a private draft: 404, like an unknown id.
+
+### Author lookup
+
+`GET /api/admin/authors/lookup?search=` returns up to 20 authors (any account status) whose name or email contains `search` (ignoring case, `%` and `_` literal, at most 100 characters), ordered by name. An empty search returns the first 20. Administrators are never listed.
+
+Tests: `backend/tests/ContentReview.IntegrationTests/Reviews/ReviewQueueTests.cs`.

@@ -29,7 +29,11 @@ public interface ICorrelationIdAccessor
     string CorrelationId { get; }
 }
 
-public sealed class CorrelationIdAccessor(IHttpContextAccessor accessor) : ICorrelationIdAccessor
+public sealed class CorrelationIdAccessor(IHttpContextAccessor accessor) : ICorrelationIdAccessor, ContentReview.Infrastructure.Auditing.ICorrelationIdSource
 {
     public string CorrelationId => accessor.HttpContext is { } context ? Errors.CorrelationId.From(context) : string.Empty;
+
+    // Outside a request there is no id (an empty string would be recorded as one).
+    string? ContentReview.Infrastructure.Auditing.ICorrelationIdSource.CorrelationId =>
+        accessor.HttpContext is { } context ? Errors.CorrelationId.From(context) : null;
 }

@@ -13,6 +13,7 @@ public interface IAuditWriter
 /// <summary>Audit action names written by the application.</summary>
 public static class AuditActions
 {
+    public const string AdministratorProvisioned = "AdministratorProvisioned";
     public const string InvitationCreated = "InvitationCreated";
     public const string InvitationRevoked = "InvitationRevoked";
     public const string UserRegistered = "UserRegistered";

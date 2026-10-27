@@ -4,6 +4,7 @@ using ContentReview.Domain.Security;
 using ContentReview.Infrastructure.Auditing;
 using ContentReview.Infrastructure.Articles;
 using ContentReview.Infrastructure.Reviews;
+using ContentReview.Infrastructure.Revisions;
 using ContentReview.Infrastructure.Categories;
 using ContentReview.Infrastructure.Invitations;
 using ContentReview.Infrastructure.Registration;
@@ -60,6 +61,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthorProfileService, AuthorProfileService>();
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IArticleService, ArticleService>();
+        services.AddScoped<IRevisionService, RevisionService>();
         services.AddScoped<IMyArticlesService, MyArticlesService>();
         services.AddScoped<IFeedService, FeedService>();
         services.AddScoped<IAdminDashboardService, AdminDashboardService>();

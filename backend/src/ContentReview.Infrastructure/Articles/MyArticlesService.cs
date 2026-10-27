@@ -83,6 +83,14 @@ public sealed class MyArticlesService(ContentReviewDbContext db) : IMyArticlesSe
                     g => g.Key,
                     g => g.OrderByDescending(r => r.SubmissionVersion).ThenByDescending(r => r.DecidedAt).First().Reason);
 
+        // A published article shows its revision (if any) next to it.
+        var publishedIds = rows.Where(r => r.Status == ArticleStatus.Published).Select(r => r.Id).ToList();
+        var revisions = publishedIds.Count == 0
+            ? new Dictionary<Guid, OpenRevisionSummary>()
+            : await db.ArticleRevisions.AsNoTracking()
+                .Where(r => publishedIds.Contains(r.ArticleId) && r.Status != RevisionStatus.Approved)
+                .ToDictionaryAsync(r => r.ArticleId, r => new OpenRevisionSummary(r.Id, r.Number, r.Status, r.UpdatedAt), cancellationToken);
+
         var items = rows.Select(r => new MyArticleItem(
                 r.Id,
                 r.Title,
@@ -92,11 +100,23 @@ public sealed class MyArticlesService(ContentReviewDbContext db) : IMyArticlesSe
                 r.SubmittedAt,
                 r.PublishedAt,
                 r.Status == ArticleStatus.Rejected && reasons.TryGetValue(r.Id, out var reason) ? reason : null,
-                ArticleLifecycle.AllowedActions(r.Status, ActorKind.Owner).Select(a => a.ToString().ToLowerInvariant()).ToList(),
-                r.Version))
+                AllowedActionsOf(r.Status, revisions.ContainsKey(r.Id)),
+                r.Version,
+                revisions.GetValueOrDefault(r.Id)))
             .ToList();
 
         return new PagedResult<MyArticleItem>(items, filter.Page, filter.PageSize, totalCount);
+    }
+
+    private static List<string> AllowedActionsOf(ArticleStatus status, bool hasOpenRevision)
+    {
+        var actions = ArticleLifecycle.AllowedActions(status, ActorKind.Owner).Select(a => a.ToString().ToLowerInvariant()).ToList();
+        if (status == ArticleStatus.Published && !hasOpenRevision)
+        {
+            actions.Add(ArticleService.ReviseAction);
+        }
+
+        return actions;
     }
 
     public async Task<ArticleStatusCounts> StatsAsync(Guid authorId, CancellationToken cancellationToken = default)

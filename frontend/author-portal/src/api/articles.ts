@@ -65,3 +65,8 @@ export function updateArticle(
     body: { ...toBody(content), version },
   });
 }
+
+/** Only a Draft can be deleted. A stale `version`, or an article that is no longer a draft, is a 409. */
+export function deleteArticle(id: string, version: number): Promise<void> {
+  return apiFetch<void>(`/api/articles/${id}?version=${version}`, { method: 'DELETE' });
+}

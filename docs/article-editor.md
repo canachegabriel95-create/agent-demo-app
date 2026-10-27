@@ -35,3 +35,25 @@ After a save the status area reads "Draft saved at HH:mm" until the next edit.
 Leaving the page with unsaved changes (link, Back, Log out) asks for confirmation; closing the tab shows the browser's own warning. A successful first save does not ask when the editor moves to the edit route.
 
 Tests: `frontend/author-portal/src/pages/ArticleEditorPage.test.tsx`.
+
+# Article view and draft deletion (F08.4)
+
+`/articles/:id` shows one of the author's own articles: title, status badge (Draft, Pending review, Published, Rejected; always written out), category, created/updated/submitted/published dates, summary and body. A rejected article also shows the latest rejection reason.
+
+## Safe rendering
+
+Everything an author typed (title, summary, body, rejection reason, category name) is rendered as a React text node, in elements with `white-space: pre-wrap` and `overflow-wrap: anywhere`. There is no `dangerouslySetInnerHTML` and no markdown-to-HTML. `react/no-danger` is an ESLint **error** in both portals (`eslint.config.js`). `ArticlePage.test.tsx` renders `<script>alert(1)</script>` and `<img src=x onerror=alert(1)>` and asserts the text is literal and that no `script`, `img` or `b` element exists.
+
+## Actions
+
+The action bar is driven by `allowedActions`: **Edit** (a link to the editor) when `edit` is allowed, **Delete** when `delete` is allowed. Lifecycle buttons (submit, withdraw) arrive with F09.3.
+
+## Deleting a draft
+
+Delete opens a confirmation, "Delete draft “title”? This cannot be undone.", with **Cancel** focused first and **Delete** (`article-delete-confirm`). Cancel and Escape keep the draft. A successful delete sends the loaded `version`, then goes to My Articles with the message "Draft “title” deleted." (My Articles itself arrives with F11; until then the placeholder page shows the message). A 409 (changed elsewhere, or no longer a draft) closes the dialog, reloads the article and shows an alert; other failures show inside the dialog.
+
+## Not found
+
+A missing article and somebody else's article both show "Article not found" with a link to My Articles (the API answers 404 for both).
+
+Tests: `frontend/author-portal/src/pages/ArticlePage.test.tsx`.

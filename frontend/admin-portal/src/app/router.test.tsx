@@ -38,7 +38,7 @@ describe('layout shell', () => {
     expect(within(banner).getByText('Content Review – Admin')).toBeInTheDocument();
     expect(
       within(screen.getByRole('navigation', { name: 'Main' })).getAllByRole('link'),
-    ).toHaveLength(1);
+    ).toHaveLength(2);
     expect(screen.getByRole('main')).toBeInTheDocument();
     expect(await screen.findByText(/API is Healthy/)).toBeInTheDocument();
   });

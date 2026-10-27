@@ -20,12 +20,15 @@ export function Layout() {
       </a>
       <header className={styles.header}>
         <p className={styles.brand}>{APP_NAME}</p>
-        {/* Placeholder navigation: later stories add the real sections. */}
+        {/* Later stories add the other sections. */}
         <nav className={styles.nav} aria-label="Main">
           {status === 'authenticated' ? (
-            <NavLink to="/" end>
-              Home
-            </NavLink>
+            <>
+              <NavLink to="/" end>
+                Home
+              </NavLink>
+              <NavLink to="/invitations">Invitations</NavLink>
+            </>
           ) : (
             <NavLink to="/login">Sign in</NavLink>
           )}

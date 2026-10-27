@@ -29,7 +29,7 @@ A request is authenticated by the `Session` bearer scheme (see [authentication.m
 | `/health` | anonymous | - |
 | `POST /api/auth/login` | anonymous | - |
 | `POST /api/registration` *(F05)* | anonymous | - |
-| Swagger UI and OpenAPI document *(F14.1)* | anonymous | - |
+| Swagger UI and OpenAPI document (F14.1) | anonymous in Development/Demo only; 401 in Production | - |
 | `GET /api/auth/me`, `POST /api/auth/logout` | any authenticated | - |
 | `GET /api/categories` *(later)* | any authenticated | - |
 | `/api/admin/**` | `AdminOnly` | `AdminControllerBase` |

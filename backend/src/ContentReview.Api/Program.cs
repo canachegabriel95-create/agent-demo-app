@@ -4,6 +4,7 @@ using ContentReview.Api.Auth;
 using ContentReview.Api.Controllers;
 using ContentReview.Api.Errors;
 using ContentReview.Api.Health;
+using ContentReview.Api.OpenApi;
 using ContentReview.Api.Options;
 using ContentReview.Infrastructure;
 using ContentReview.Domain.Enums;
@@ -32,6 +33,7 @@ builder.Services.AddControllers()
     .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()))
     .ConfigureApiBehaviorOptions(o => o.InvalidModelStateResponseFactory = ModelStateErrors.CreateResponse);
 
+builder.Services.AddContentReviewSwagger();
 builder.Services.AddCors();
 builder.Services.AddOptions<CorsOptions>()
     .Configure<IOptions<PortalCorsOptions>>((cors, portals) =>
@@ -128,6 +130,9 @@ if (migrateOnStartup)
 app.UseMiddleware<CorrelationIdMiddleware>();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+
+// Swagger is a developer tool of Development and Demo; it is answered before sign-in is looked at.
+app.UseContentReviewSwagger();
 
 app.UseCors(PortalCorsOptions.PolicyName);
 app.UseAuthentication();

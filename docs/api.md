@@ -1,6 +1,20 @@
 # API conventions
 
-Base URL `http://localhost:5080`, routes under `/api`. JSON is camelCase and enums are strings (`"PendingReview"`). The endpoint reference arrives with the Swagger story (F14.1); this page describes the conventions every endpoint follows. Authentication is described in [authentication.md](authentication.md) and permissions in [permissions.md](permissions.md).
+Base URL `http://localhost:5080`, routes under `/api`. JSON is camelCase and enums are strings (`"PendingReview"`). The live endpoint reference is the Swagger UI (see below); this page describes the conventions every endpoint follows. Authentication is described in [authentication.md](authentication.md) and permissions in [permissions.md](permissions.md).
+
+## Swagger UI and OpenAPI document
+
+- Swagger UI: http://localhost:5080/swagger; OpenAPI JSON: http://localhost:5080/swagger/v1/swagger.json.
+- Served anonymously only when `ASPNETCORE_ENVIRONMENT` is `Development` or `Demo`. In any other environment (Production) `/swagger…` answers 401 for anonymous callers.
+- Operations are grouped by area (Auth, Registration, Admin – Invitations/Users/Reviews/Dashboard & Audit, Me, Articles, Feed, Categories, Health). Every operation has a summary; enums are strings; successes are `application/json`, errors are `application/problem+json` (except `/health`, which reports its checks as JSON).
+- Request examples use demo data only (`jane.author@demo.local`, `Example-Passw0rd!`, `D3M0-0000-0001`).
+
+### Authenticating in Swagger UI
+
+1. Call `POST /api/auth/login` with a demo account and the right `portal` (`Admin` or `Author`).
+2. Copy the `token` from the response.
+3. Click **Authorize**, paste the token (without `Bearer `) and confirm.
+4. Try `GET /api/auth/me`: it returns 200 with your profile. Logging out or suspension makes the token answer 401.
 
 ## Errors
 

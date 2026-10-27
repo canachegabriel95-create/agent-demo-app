@@ -57,7 +57,7 @@ The API and the portals run in the background; their output goes to `.run/*.log`
 | Author Portal | http://localhost:5174 |
 | API | http://localhost:5080 (routes under `/api`) |
 | Health | http://localhost:5080/health |
-| Swagger UI | http://localhost:5080/swagger (added by a later story) |
+| Swagger UI | http://localhost:5080/swagger (Development/Demo only) |
 | PostgreSQL | localhost:5432 |
 | pgAdmin | http://localhost:5050 |
 

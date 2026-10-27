@@ -99,7 +99,7 @@ public class AuthorizationConventionTests
             .ToList();
 
         // The only anonymous endpoints. Registration itself and Swagger are added to this list by their own stories.
-        Assert.Equal(["* /health", "POST /api/auth/login", "POST /api/registration/validate-invitation"], anonymous);
+        Assert.Equal(["* /health", "POST /api/auth/login", "POST /api/registration", "POST /api/registration/validate-invitation"], anonymous);
 
         var openWithoutRule = endpoints
             .Where(e => e.Metadata.GetMetadata<IAllowAnonymous>() is null && e.Metadata.GetMetadata<IAuthorizeData>() is null)

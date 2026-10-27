@@ -25,7 +25,7 @@ Administrators see and copy full codes. Audit events and logs never contain more
 
 1. An administrator creates an invitation for an email (`POST /api/admin/invitations`) and shares the code by hand (email delivery is out of scope). The email must not belong to an existing user.
 2. The Author Portal registration form calls `POST /api/registration/validate-invitation` for early feedback; nothing is consumed.
-3. Registration (F05.2) creates the account and calls `IInvitationRedemptionService.ConsumeAsync` in the same transaction. One conditional UPDATE makes the invitation Used, so concurrent registrations with one code cannot both succeed; the loser gets the `AlreadyUsed` reason.
+3. Registration (`POST /api/registration`, see [api.md](api.md#post-apiregistration)) creates the account and calls `IInvitationRedemptionService.ConsumeAsync` in the same transaction. One conditional UPDATE makes the invitation Used, so concurrent registrations with one code cannot both succeed; the loser gets the `AlreadyUsed` reason.
 4. An administrator may revoke an Available invitation at any time before that.
 
 ## Admin Portal: Invitations page

@@ -15,4 +15,5 @@ public static class AuditActions
 {
     public const string InvitationCreated = "InvitationCreated";
     public const string InvitationRevoked = "InvitationRevoked";
+    public const string UserRegistered = "UserRegistered";
 }

@@ -110,6 +110,41 @@ Tests: `backend/tests/ContentReview.IntegrationTests/Invitations/AdminInvitation
 
 ## Registration (anonymous)
 
+### `POST /api/registration`
+
+Creates an Author account with an invitation code. Anonymous, rate limited with the login limiter. The field rules are in [business-rules.md](business-rules.md#accounts).
+
+```json
+{ "invitationCode": "ABCD-EFGH-JKMN", "fullName": "Jane Doe", "email": "jane@demo.local", "password": "...", "confirmPassword": "..." }
+```
+
+- `201 { "id", "email", "fullName" }`. No session is created and no token is returned: the person signs in afterwards (`POST /api/auth/login`, portal `Author`).
+- The role is **not** an input. A `role` in the body is ignored; every account created here is an Active Author.
+- `400` ValidationProblemDetails with every invalid field at once, keyed in camelCase:
+
+| Field | Messages |
+|---|---|
+| `invitationCode` | "Invitation code is required."; or the invitation failure below |
+| `fullName` | "Full name is required."; "Full name must be between 2 and 100 characters." (after trimming) |
+| `email` | "Email is required."; "Enter a valid email address of at most 254 characters."; or the mismatch below |
+| `password` | "Password is required."; or one sentence per broken rule ("Must be between 12 and 128 characters long." and so on) |
+| `confirmPassword` | "Confirm your password."; "Passwords do not match." |
+
+- `400` for an invitation that cannot be used, on the field it belongs to:
+
+| Reason | Field | Message |
+|---|---|---|
+| NotFound (unknown or malformed code) | `invitationCode` | This invitation code is not valid. Check the code or ask an administrator for a new one. |
+| Expired | `invitationCode` | This invitation has expired. Ask an administrator for a new one. |
+| Revoked | `invitationCode` | This invitation has been revoked. Ask an administrator for a new one. |
+| AlreadyUsed | `invitationCode` | This invitation has already been used. |
+| EmailMismatch | `email` | The email address does not match this invitation. |
+
+- `409` "An account with this email already exists." (in `detail`). The code and email are checked first, so someone without a valid invitation for an address cannot use this response to find out whether it has an account.
+- `429` when the rate limit is exceeded.
+
+How it is done (`RegistrationService`): the fields are validated first (nothing is hashed for an invalid password); then, in one transaction at ReadCommitted, the user is inserted, `ConsumeAsync` uses the invitation, and the `UserRegistered` audit event (`userId`, `email`, `invitationId`; no password, no code) is recorded; then the transaction commits. Any failure rolls everything back, so no account exists and the invitation is still Available. When two requests race for one invitation, exactly one succeeds; the other is told the invitation was already used.
+
 ### `POST /api/registration/validate-invitation`
 
 Body `{ code, email }`. Checks an invitation code and email without using the code up, so the registration form can warn early. Rate limited with the login limiter (`Auth:LoginAttemptsPerMinute` per client address, shared with `POST /api/auth/login`).
@@ -119,15 +154,15 @@ Body `{ code, email }`. Checks an invitation code and email without using the co
 
 | `reason` | `title` |
 |---|---|
-| `NotFound` | This invitation code was not found. |
-| `EmailMismatch` | This invitation was issued for a different email address. |
-| `Expired` | This invitation has expired. |
-| `Revoked` | This invitation has been revoked. |
+| `NotFound` | This invitation code is not valid. Check the code or ask an administrator for a new one. |
+| `EmailMismatch` | The email address does not match this invitation. |
+| `Expired` | This invitation has expired. Ask an administrator for a new one. |
+| `Revoked` | This invitation has been revoked. Ask an administrator for a new one. |
 | `AlreadyUsed` | This invitation has already been used. |
 
 A missing `code` or `email` is an ordinary validation 400 with `errors`. The email is checked before the status, so a wrong email never learns whether the code was used or revoked. The reasons do tell a caller that a code exists, which the story asks for; the rate limit is what slows guessing, and a code has 60 random bits.
 
-### Consuming an invitation (for F05.2)
+### Consuming an invitation (used by registration)
 
 `IInvitationRedemptionService` in `ContentReview.Infrastructure.Invitations` is the only code that may use an invitation.
 

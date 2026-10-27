@@ -18,9 +18,9 @@ public interface IInvitationRedemptionService
     /// Marks the invitation as used by <paramref name="newUserId"/> with one conditional UPDATE, so of any number of
     /// concurrent calls for the same code exactly one succeeds. It must run inside the registration transaction
     /// (<c>Database.BeginTransactionAsync</c> on the same DbContext) so that the invitation and the account are saved
-    /// or rolled back together.
+    /// or rolled back together. Returns the id of the invitation that was used.
     /// </summary>
     /// <exception cref="Domain.Exceptions.InvitationNotRedeemableException">The invitation cannot be used; nothing was changed.</exception>
     /// <exception cref="InvalidOperationException">There is no current transaction.</exception>
-    Task ConsumeAsync(string? code, string? email, Guid newUserId, CancellationToken cancellationToken = default);
+    Task<Guid> ConsumeAsync(string? code, string? email, Guid newUserId, CancellationToken cancellationToken = default);
 }

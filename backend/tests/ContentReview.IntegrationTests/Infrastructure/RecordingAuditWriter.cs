@@ -13,6 +13,16 @@ public sealed class RecordingAuditWriter : IAuditWriter
 
     public IReadOnlyList<RecordedAudit> Events => [.. _events];
 
-    public void Record(string action, string entityType, Guid? entityId, Guid? actorUserId, object? details = null) =>
+    /// <summary>When set, recording this action throws, to simulate a failure late in a request.</summary>
+    public string? FailOn { get; set; }
+
+    public void Record(string action, string entityType, Guid? entityId, Guid? actorUserId, object? details = null)
+    {
+        if (action == FailOn)
+        {
+            throw new InvalidOperationException($"Simulated failure while recording {action}.");
+        }
+
         _events.Enqueue(new RecordedAudit(action, entityType, entityId, actorUserId, JsonSerializer.Serialize(details)));
+    }
 }

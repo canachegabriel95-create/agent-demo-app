@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using ContentReview.Domain.Common;
 using ContentReview.Domain.Enums;
 using ContentReview.Infrastructure.Invitations;
+using ContentReview.Infrastructure.Registration;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -20,12 +21,55 @@ public sealed record ValidateInvitationRequest
 
 public sealed record ValidateInvitationResponse(bool Valid);
 
+/// <summary>
+/// The registration form. There is deliberately no <c>role</c>: every account created here is an Author, and a
+/// <c>role</c> sent anyway is ignored. The field rules are in docs/business-rules.md (Accounts).
+/// </summary>
+public sealed record RegisterRequest
+{
+    public string? InvitationCode { get; init; }
+
+    public string? FullName { get; init; }
+
+    public string? Email { get; init; }
+
+    public string? Password { get; init; }
+
+    public string? ConfirmPassword { get; init; }
+}
+
+public sealed record RegisterResponse(Guid Id, string Email, string FullName);
+
 /// <summary>Anonymous endpoints used by the Author Portal registration form.</summary>
 [ApiController]
 [AllowAnonymous]
 [Route("api/registration")]
-public sealed class RegistrationController(IInvitationRedemptionService redemption) : ControllerBase
+public sealed class RegistrationController(IInvitationRedemptionService redemption, IRegistrationService registration)
+    : ControllerBase
 {
+    /// <summary>Creates an Author account with an invitation code.</summary>
+    /// <remarks>
+    /// The invitation is used up in the same transaction that creates the account, so a failure leaves no account and
+    /// the invitation Available. No session is created: sign in afterwards. The password and email rules are in
+    /// docs/business-rules.md, section "Accounts".
+    /// 400 lists the invalid fields; an unusable invitation is reported on <c>invitationCode</c> (or <c>email</c> when
+    /// the address does not match it). 409 means an account with this email already exists.
+    /// Shares the rate limit of the login endpoint.
+    /// </remarks>
+    [HttpPost]
+    [EnableRateLimiting(AuthController.LoginRateLimitPolicy)]
+    [ProducesResponseType<RegisterResponse>(StatusCodes.Status201Created)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status429TooManyRequests)]
+    public async Task<ActionResult<RegisterResponse>> Register(RegisterRequest request, CancellationToken cancellationToken)
+    {
+        var user = await registration.RegisterAsync(
+            new RegistrationInput(request.InvitationCode, request.FullName, request.Email, request.Password, request.ConfirmPassword),
+            cancellationToken);
+        return StatusCode(StatusCodes.Status201Created, new RegisterResponse(user.Id, user.Email, user.FullName));
+    }
+
     /// <summary>Checks an invitation code and email without using the code up.</summary>
     /// <remarks>
     /// Gives the person early feedback before they fill in the rest of the form. The registration itself checks

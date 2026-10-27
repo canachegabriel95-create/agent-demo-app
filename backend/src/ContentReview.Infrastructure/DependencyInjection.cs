@@ -2,6 +2,7 @@ using ContentReview.Domain.Auditing;
 using ContentReview.Domain.Security;
 using ContentReview.Infrastructure.Auditing;
 using ContentReview.Infrastructure.Invitations;
+using ContentReview.Infrastructure.Registration;
 using ContentReview.Infrastructure.Persistence;
 using ContentReview.Infrastructure.Security;
 using ContentReview.Infrastructure.Sessions;
@@ -44,6 +45,7 @@ public static class DependencyInjection
         services.TryAddScoped<IAuditWriter, NoOpAuditWriter>();
         services.AddScoped<IInvitationService, InvitationService>();
         services.AddScoped<IInvitationRedemptionService, InvitationRedemptionService>();
+        services.AddScoped<IRegistrationService, RegistrationService>();
 
         return services;
     }

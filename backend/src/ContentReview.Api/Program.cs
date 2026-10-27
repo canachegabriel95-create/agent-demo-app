@@ -94,7 +94,7 @@ builder.Services.AddRateLimiter(limiter =>
         await context.HttpContext.RequestServices.GetRequiredService<IProblemDetailsService>().WriteAsync(new ProblemDetailsContext
         {
             HttpContext = context.HttpContext,
-            ProblemDetails = { Status = StatusCodes.Status429TooManyRequests, Title = "Too many login attempts. Try again later." },
+            ProblemDetails = { Status = StatusCodes.Status429TooManyRequests, Title = "Too many attempts. Try again later." },
         });
     };
 });

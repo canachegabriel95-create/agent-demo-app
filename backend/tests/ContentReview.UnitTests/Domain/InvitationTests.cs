@@ -1,5 +1,6 @@
 using ContentReview.Domain.Entities;
 using ContentReview.Domain.Enums;
+using ContentReview.Domain.Exceptions;
 
 namespace ContentReview.UnitTests.Domain;
 
@@ -100,5 +101,42 @@ public class InvitationTests
         Set(invitation, nameof(Invitation.RevokedAt), Now.AddDays(2));
 
         Assert.Equal(InvitationStatus.Used, invitation.GetStatus(Now.AddDays(3)));
+    }
+
+    [Fact]
+    public void Revoke_marks_an_available_invitation_as_revoked_by_the_administrator()
+    {
+        var invitation = Create();
+        var other = Guid.CreateVersion7();
+
+        invitation.Revoke(other, Now.AddHours(1));
+
+        Assert.Equal(Now.AddHours(1), invitation.RevokedAt);
+        Assert.Equal(other, invitation.RevokedByUserId);
+        Assert.Equal(InvitationStatus.Revoked, invitation.GetStatus(Now.AddHours(2)));
+    }
+
+    [Fact]
+    public void Revoke_is_rejected_when_the_invitation_is_expired()
+    {
+        var invitation = Create(validityDays: 1);
+
+        var ex = Assert.Throws<InvalidTransitionException>(() => invitation.Revoke(Admin, Now.AddDays(1)));
+
+        Assert.Contains("Expired", ex.Message);
+        Assert.Null(invitation.RevokedAt);
+    }
+
+    [Fact]
+    public void Revoke_is_rejected_when_the_invitation_is_used_or_already_revoked()
+    {
+        var used = Create();
+        Set(used, nameof(Invitation.UsedAt), Now.AddHours(1));
+        var revoked = Create();
+        revoked.Revoke(Admin, Now.AddHours(1));
+
+        Assert.Throws<InvalidTransitionException>(() => used.Revoke(Admin, Now.AddHours(2)));
+        Assert.Throws<InvalidTransitionException>(() => revoked.Revoke(Admin, Now.AddHours(2)));
+        Assert.Null(used.RevokedAt);
     }
 }

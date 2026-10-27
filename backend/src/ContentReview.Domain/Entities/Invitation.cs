@@ -1,5 +1,6 @@
 using ContentReview.Domain.Common;
 using ContentReview.Domain.Enums;
+using ContentReview.Domain.Exceptions;
 
 namespace ContentReview.Domain.Entities;
 
@@ -75,5 +76,18 @@ public class Invitation
         }
 
         return ExpiresAt <= now ? InvitationStatus.Expired : InvitationStatus.Available;
+    }
+
+    /// <summary>Only an Available invitation can be revoked.</summary>
+    public void Revoke(Guid revokedByUserId, DateTimeOffset now)
+    {
+        var status = GetStatus(now);
+        if (status != InvitationStatus.Available)
+        {
+            throw new InvalidTransitionException($"Only an available invitation can be revoked; this one is {status}.");
+        }
+
+        RevokedByUserId = Guard.NotEmpty(revokedByUserId, nameof(revokedByUserId));
+        RevokedAt = Guard.Utc(now);
     }
 }

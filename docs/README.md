@@ -10,6 +10,7 @@ Placeholder index. Each document below is added by the story noted next to it; s
 | [`admin-provisioning.md`](admin-provisioning.md) | Creating and verifying the first administrator, security notes | F02.3 (done) |
 | [`password-hashing.md`](password-hashing.md) | Shared password hashing service, password policy, `hash-password` CLI | F02.1 (done) |
 | [`permissions.md`](permissions.md) | Roles, policies, ownership rules | F03.2 (done) / F16 |
+| [`invitations.md`](invitations.md) | Invitation states, codes, redemption, Admin Portal page | F04 (done) |
 | `lifecycle.md` | Article lifecycle state machine and invitation states | F09 / F16 |
 | [`api.md`](api.md) | Conventions, error format and correlation id (endpoint reference follows) | F14.2 (done) / F14 / F16 |
 | `demo-data.md` | Seed data, reset command | F15 |

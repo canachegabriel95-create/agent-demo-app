@@ -18,5 +18,14 @@ internal sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
 
         builder.HasIndex(c => c.Name).IsUnique();
         builder.HasIndex(c => c.Slug).IsUnique();
+
+        // The list is fixed in this version. Fixed ids keep every database (and every test run) identical.
+        builder.HasData(CategorySeed.All.Select(c => new
+        {
+            c.Id,
+            c.Name,
+            c.Slug,
+            c.SortOrder,
+        }));
     }
 }

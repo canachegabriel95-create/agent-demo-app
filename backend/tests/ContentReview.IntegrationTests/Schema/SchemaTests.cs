@@ -207,7 +207,12 @@ public partial class SchemaTests(PostgresFixture postgres) : IAsyncLifetime
 
         Assert.False(db.Database.HasPendingModelChanges(), "Add a new EF Core migration for the model change.");
         Assert.Empty(await db.Database.GetPendingMigrationsAsync());
-        Assert.Contains("InitialSchema", (await db.Database.GetAppliedMigrationsAsync()).Single());
+
+        // Every migration in the project is applied, in order, starting with the initial schema.
+        var applied = (await db.Database.GetAppliedMigrationsAsync()).ToList();
+        Assert.Equal(db.Database.GetMigrations(), applied);
+        Assert.EndsWith("_InitialSchema", applied.First());
+        Assert.Contains(applied, m => m.EndsWith("_SeedCategories", StringComparison.Ordinal));
     }
 
     private async Task<List<T>> QueryAsync<T>(string sql)

@@ -1,4 +1,6 @@
+using ContentReview.Domain.Security;
 using ContentReview.Infrastructure.Persistence;
+using ContentReview.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,7 +12,7 @@ public static class DependencyInjection
     public const string ConnectionStringName = "Default";
 
     /// <summary>
-    /// Registers the DbContext (Npgsql, snake_case). The connection string is resolved lazily from
+    /// Registers the DbContext (Npgsql, snake_case) and the shared <see cref="IPasswordHashingService"/>. The connection string is resolved lazily from
     /// configuration (<c>ConnectionStrings__Default</c>) and is never stored in source.
     /// </summary>
     public static IServiceCollection AddInfrastructure(this IServiceCollection services)
@@ -29,6 +31,8 @@ public static class DependencyInjection
 
             options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention();
         });
+
+        services.AddSingleton<IPasswordHashingService, PasswordHashingService>();
 
         return services;
     }

@@ -5,6 +5,7 @@ import { ArticlePage } from '../pages/ArticlePage';
 import { ArticleEditorPage } from '../pages/ArticleEditorPage';
 import { ComingSoonPage } from '../pages/ComingSoonPage';
 import { HomePage } from '../pages/HomePage';
+import { MyArticlesPage } from '../pages/MyArticlesPage';
 import { LoginPage } from '../pages/LoginPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { ProfilePage } from '../pages/ProfilePage';
@@ -28,7 +29,7 @@ export const appRoutes: RouteObject[] = [
         element: <RequireAuth />,
         children: [
           { index: true, element: <HomePage /> },
-          { path: 'articles', element: <ComingSoonPage title="My Articles" /> },
+          { path: 'articles', element: <MyArticlesPage /> },
           { path: 'articles/new', element: <ArticleEditorPage /> },
           { path: 'articles/:id/edit', element: <ArticleEditorPage /> },
           { path: 'articles/:id', element: <ArticlePage /> },

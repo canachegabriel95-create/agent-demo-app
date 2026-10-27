@@ -25,11 +25,12 @@ export function Layout() {
           {status === 'authenticated' ? (
             <>
               <NavLink to="/" end>
-                Home
+                Dashboard
               </NavLink>
               <NavLink to="/reviews">Review queue</NavLink>
               <NavLink to="/users">Authors</NavLink>
               <NavLink to="/invitations">Invitations</NavLink>
+              <NavLink to="/audit">Audit history</NavLink>
             </>
           ) : (
             <NavLink to="/login">Sign in</NavLink>

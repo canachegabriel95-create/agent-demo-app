@@ -42,7 +42,7 @@ Implementation:
 |---|---|
 | API | `PasswordPolicy.Check` returns the violated `PasswordRule`s; `PasswordPolicy.Validate` returns the matching sentences for messages (`ContentReview.Domain/Security/PasswordPolicy.cs`) |
 | `hash-password` tool | uses `PasswordPolicy.Validate` and prints which rules failed |
-| Author Portal | `src/validation/passwordPolicy.ts` mirrors the rules; `PasswordRequirements` shows a live checklist ("Met." / "Not met." in words, announced politely). The registration form (F05.3) uses both |
+| Author Portal | `src/validation/passwordPolicy.ts` mirrors the rules; `PasswordRequirements` shows a live checklist ("Met." / "Not met." in words, announced politely). `POST /api/registration` enforces them (F05.2) and the registration form (F05.3) uses both |
 
 ### Keeping the two implementations identical
 

@@ -13,7 +13,7 @@ public sealed class InvitationRedemptionService(ContentReviewDbContext db, TimeP
         string? code, string? email, CancellationToken cancellationToken = default) =>
         EvaluateAsync(InvitationCode.Normalize(code), Normalize(email), timeProvider.GetUtcNow(), cancellationToken);
 
-    public async Task ConsumeAsync(string? code, string? email, Guid newUserId, CancellationToken cancellationToken = default)
+    public async Task<Guid> ConsumeAsync(string? code, string? email, Guid newUserId, CancellationToken cancellationToken = default)
     {
         if (db.Database.CurrentTransaction is null)
         {
@@ -39,7 +39,10 @@ public sealed class InvitationRedemptionService(ContentReviewDbContext db, TimeP
                     cancellationToken);
             if (affected == 1)
             {
-                return;
+                return await db.Invitations
+                    .Where(i => i.UsedByUserId == newUserId)
+                    .Select(i => i.Id)
+                    .SingleAsync(cancellationToken);
             }
         }
 

@@ -302,10 +302,10 @@ public class InvitationRedemptionTests(PostgresFixture postgres) : IAsyncLifetim
     }
 
     [Theory]
-    [InlineData("NotFound", "This invitation code was not found.")]
-    [InlineData("EmailMismatch", "This invitation was issued for a different email address.")]
-    [InlineData("Expired", "This invitation has expired.")]
-    [InlineData("Revoked", "This invitation has been revoked.")]
+    [InlineData("NotFound", "This invitation code is not valid. Check the code or ask an administrator for a new one.")]
+    [InlineData("EmailMismatch", "The email address does not match this invitation.")]
+    [InlineData("Expired", "This invitation has expired. Ask an administrator for a new one.")]
+    [InlineData("Revoked", "This invitation has been revoked. Ask an administrator for a new one.")]
     [InlineData("AlreadyUsed", "This invitation has already been used.")]
     public async Task The_endpoint_answers_400_with_the_reason(string reason, string message)
     {

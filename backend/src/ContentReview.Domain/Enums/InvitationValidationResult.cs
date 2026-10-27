@@ -13,15 +13,19 @@ public enum InvitationValidationResult
 
 public static class InvitationValidationResultExtensions
 {
+    /// <summary>The field of the registration form the reason belongs to.</summary>
+    public static string Field(this InvitationValidationResult result) =>
+        result == InvitationValidationResult.EmailMismatch ? "email" : "invitationCode";
+
     /// <summary>The sentence shown to the person who entered the code.</summary>
     public static string Message(this InvitationValidationResult result) => result switch
     {
         InvitationValidationResult.Valid => "The invitation code is valid.",
-        InvitationValidationResult.NotFound => "This invitation code was not found.",
-        InvitationValidationResult.Expired => "This invitation has expired.",
-        InvitationValidationResult.Revoked => "This invitation has been revoked.",
+        InvitationValidationResult.NotFound => "This invitation code is not valid. Check the code or ask an administrator for a new one.",
+        InvitationValidationResult.Expired => "This invitation has expired. Ask an administrator for a new one.",
+        InvitationValidationResult.Revoked => "This invitation has been revoked. Ask an administrator for a new one.",
         InvitationValidationResult.AlreadyUsed => "This invitation has already been used.",
-        InvitationValidationResult.EmailMismatch => "This invitation was issued for a different email address.",
+        InvitationValidationResult.EmailMismatch => "The email address does not match this invitation.",
         _ => throw new ArgumentOutOfRangeException(nameof(result), result, null),
     };
 }

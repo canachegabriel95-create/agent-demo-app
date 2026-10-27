@@ -6,6 +6,7 @@ import { HomePage } from '../pages/HomePage';
 import { InvitationsPage } from '../pages/InvitationsPage';
 import { LoginPage } from '../pages/LoginPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
+import { RevisionReviewPage } from '../pages/RevisionReviewPage';
 import { ReviewPage } from '../pages/ReviewPage';
 import { ReviewQueuePage } from '../pages/ReviewQueuePage';
 import { UserDetailPage } from '../pages/UserDetailPage';
@@ -30,6 +31,7 @@ export const appRoutes: RouteObject[] = [
           { path: 'invitations', element: <InvitationsPage /> },
           { path: 'audit', element: <AuditPage /> },
           { path: 'reviews', element: <ReviewQueuePage /> },
+          { path: 'reviews/revisions/:revisionId', element: <RevisionReviewPage /> },
           { path: 'reviews/:articleId', element: <ReviewPage /> },
           { path: 'users', element: <UsersPage /> },
           { path: 'users/:id', element: <UserDetailPage /> },

@@ -9,6 +9,10 @@ export interface ReviewQueueItem {
   author: { id: string; fullName: string; status: UserStatus };
   submittedAt: string;
   submissionVersion: number;
+  /** `Article` is a new submission; `Revision` is an edit of a published article (`articleId` is that article). */
+  kind: 'Article' | 'Revision';
+  /** Set only for a revision: open it at `/reviews/revisions/:revisionId`. */
+  revisionId: string | null;
 }
 
 export interface ReviewQueueFilters {
@@ -19,7 +23,7 @@ export interface ReviewQueueFilters {
   page?: number;
 }
 
-/** Pending articles only. Articles of suspended authors are included: the item says so. */
+/** Pending new articles and pending revisions of published articles. Suspended authors' items are included. */
 export function listReviewQueue(
   filters: ReviewQueueFilters,
   signal?: AbortSignal,
@@ -128,4 +132,70 @@ export function currentStatusOf(error: unknown): string | undefined {
   }
 
   return undefined;
+}
+
+export type ReviewRevisionStatus = 'Draft' | 'PendingReview' | 'Rejected' | 'Approved';
+
+/** The content that readers see now, shown next to a revision. */
+export interface PublishedContent {
+  title: string;
+  summary: string;
+  body: string;
+  category: { id: string; name: string } | null;
+  publishedVersion: number;
+  publishedAt: string;
+}
+
+/** A revision as the administrator reviews it, next to the published version it would replace. */
+export interface ReviewRevision {
+  id: string;
+  articleId: string;
+  number: number;
+  title: string;
+  summary: string;
+  body: string;
+  category: { id: string; name: string } | null;
+  status: ReviewRevisionStatus;
+  submissionVersion: number;
+  submittedAt: string;
+  published: PublishedContent;
+  author: { id: string; fullName: string; email: string; status: UserStatus };
+  reviewHistory: ReviewHistoryEntry[];
+  canReview: boolean;
+  reviewBlockedReason: string | null;
+  /** Concurrency token: send it back with the decision. */
+  version: number;
+}
+
+/** 404 for an unknown revision and for one that was never submitted (the author's private draft). */
+export function getReviewRevision(id: string, signal?: AbortSignal): Promise<ReviewRevision> {
+  return apiFetch<ReviewRevision>(`/api/admin/revisions/${encodeURIComponent(id)}`, { signal });
+}
+
+/**
+ * Approves the revision: its content replaces the published content. A 409 means it changed since it was opened (the
+ * ProblemDetails carries `currentStatus`), the author is suspended, or another administrator decided first.
+ */
+export function approveRevision(
+  id: string,
+  version: number,
+  submissionVersion: number,
+): Promise<ReviewRevision> {
+  return apiFetch<ReviewRevision>(`/api/admin/revisions/${encodeURIComponent(id)}/approve`, {
+    method: 'POST',
+    body: { version, submissionVersion },
+  });
+}
+
+/** Sends the revision back with a reason (10-1000 characters); the published version is not touched. */
+export function rejectRevision(
+  id: string,
+  version: number,
+  submissionVersion: number,
+  reason: string,
+): Promise<ReviewRevision> {
+  return apiFetch<ReviewRevision>(`/api/admin/revisions/${encodeURIComponent(id)}/reject`, {
+    method: 'POST',
+    body: { version, submissionVersion, reason },
+  });
 }

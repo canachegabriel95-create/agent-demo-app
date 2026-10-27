@@ -156,12 +156,13 @@ export function ReviewQueuePage() {
         >
           <table className={styles.table}>
             <caption className={styles.visuallyHidden}>
-              Articles waiting for review, {direction === 'asc' ? 'oldest' : 'newest'} submission
-              first
+              Articles and revisions waiting for review, {direction === 'asc' ? 'oldest' : 'newest'}{' '}
+              submission first
             </caption>
             <thead>
               <tr>
                 <th scope="col">Title</th>
+                <th scope="col">Type</th>
                 <th scope="col">Author</th>
                 <th scope="col">Category</th>
                 <th scope="col" aria-sort={direction === 'asc' ? 'ascending' : 'descending'}>
@@ -186,15 +187,31 @@ export function ReviewQueuePage() {
             </thead>
             <tbody>
               {data.items.map((item) => (
-                <tr key={item.articleId} data-testid={`review-row-${item.articleId}`}>
+                <tr
+                  key={item.revisionId ?? item.articleId}
+                  data-testid={`review-row-${item.revisionId ?? item.articleId}`}
+                >
                   <td>
                     {/* The page the administrator came from, so that a decision can lead back to the same view. */}
                     <Link
-                      to={`/reviews/${item.articleId}`}
+                      to={
+                        item.kind === 'Revision'
+                          ? `/reviews/revisions/${item.revisionId}`
+                          : `/reviews/${item.articleId}`
+                      }
                       state={{ queueSearch: location.search }}
                     >
                       {item.title}
                     </Link>
+                  </td>
+                  <td>
+                    <span
+                      className={styles.badge}
+                      data-status={item.kind}
+                      data-testid="review-row-kind"
+                    >
+                      {item.kind === 'Revision' ? 'Revision' : 'New article'}
+                    </span>
                   </td>
                   <td>
                     {item.author.fullName}

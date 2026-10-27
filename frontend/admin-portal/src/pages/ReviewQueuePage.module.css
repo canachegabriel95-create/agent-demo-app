@@ -197,3 +197,7 @@
   background: var(--color-success-bg);
   color: var(--color-success);
 }
+
+.badge[data-status='Revision'] {
+  color: var(--color-primary);
+}

@@ -26,6 +26,8 @@ function item(
     author: { id: 'a-ann', fullName: 'Ann Author', status: 'Active' },
     submittedAt: '2026-10-20T09:30:00Z',
     submissionVersion: 1,
+    kind: 'Article',
+    revisionId: null,
     ...overrides,
   };
 }

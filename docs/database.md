@@ -56,7 +56,7 @@ Integration tests in `backend/tests/ContentReview.IntegrationTests/Schema` apply
 
 ## Provisioning the initial administrator
 
-The first administrator is created only by `db/scripts/provision-admin.sql`; public registration can never create administrators. The script takes three `psql` variables and has no values of its own:
+Step-by-step guide: [admin-provisioning.md](admin-provisioning.md). The first administrator is created only by `db/scripts/provision-admin.sql`; public registration can never create administrators. The script takes three `psql` variables and has no values of its own:
 
 | Variable | Meaning |
 |---|---|

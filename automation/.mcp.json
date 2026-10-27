@@ -1,0 +1,62 @@
+{
+  "mcpServers": {
+    "postgres": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "C:/Users/gcanache/sources/mcps/cityPasses/postgres/dist/index.js"
+      ],
+      "env": {
+        "DATABASE_URL": "postgresql://content_review:change-me-local-only@localhost:5433/content_review?sslmode=disable",
+        "ALLOWED_SCHEMAS": "public"
+      }
+    },
+    "swagger": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "C:/Users/gcanache/sources/mcps/cityPasses/swagger/dist/index.js",
+        "http://localhost:5080/swagger/v1/swagger.json"
+      ],
+      "env": {}
+    },
+    "azure-devops": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@azure-devops/mcp",
+        "demo-app-gabi",
+        "--authentication",
+        "pat"
+      ],
+      "env": {
+        "PERSONAL_ACCESS_TOKEN": "${AZURE_DEVOPS_MCP_TOKEN}"
+      }
+    },
+    "chrome-devtools-mcp": {
+      "type": "stdio",
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "-p",
+        "chrome-devtools-mcp@latest",
+        "-p",
+        "pkce-challenge",
+        "chrome-devtools-mcp"
+      ],
+      "env": {}
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest"
+      ],
+      "env": {}
+    }
+  }
+}

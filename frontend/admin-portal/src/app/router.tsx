@@ -5,6 +5,7 @@ import { HomePage } from '../pages/HomePage';
 import { InvitationsPage } from '../pages/InvitationsPage';
 import { LoginPage } from '../pages/LoginPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
+import { ReviewPage } from '../pages/ReviewPage';
 import { ReviewQueuePage } from '../pages/ReviewQueuePage';
 import { UserDetailPage } from '../pages/UserDetailPage';
 import { UsersPage } from '../pages/UsersPage';
@@ -27,6 +28,7 @@ export const appRoutes: RouteObject[] = [
           { index: true, element: <HomePage /> },
           { path: 'invitations', element: <InvitationsPage /> },
           { path: 'reviews', element: <ReviewQueuePage /> },
+          { path: 'reviews/:articleId', element: <ReviewPage /> },
           { path: 'users', element: <UsersPage /> },
           { path: 'users/:id', element: <UserDetailPage /> },
           { path: '*', element: <NotFoundPage /> },

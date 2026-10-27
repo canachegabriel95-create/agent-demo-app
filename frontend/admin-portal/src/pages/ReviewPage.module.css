@@ -1,0 +1,175 @@
+.back {
+  display: inline-block;
+  margin-bottom: 0.5rem;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.titleRow h1 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.card {
+  margin: 1rem 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.card h2 {
+  margin-top: 0;
+  font-size: 1.125rem;
+}
+
+.card h3 {
+  margin: 0.75rem 0 0;
+  font-size: 1rem;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.4rem 1.25rem;
+  margin: 0.75rem 0;
+}
+
+.facts dt {
+  color: var(--color-muted);
+  font-weight: 600;
+}
+
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* User text is shown as typed: line breaks kept, markup never interpreted. */
+.text {
+  margin: 0.25rem 0 0.5rem;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.empty {
+  color: var(--color-muted);
+  font-style: italic;
+}
+
+/* The status is always written out; the colour only reinforces it. */
+.badge {
+  display: inline-block;
+  padding: 0.1rem 0.55rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.badge[data-status='Draft'],
+.badge[data-status='Active'] {
+  color: var(--color-muted);
+}
+
+.badge[data-status='Active'] {
+  color: var(--color-success);
+  background: var(--color-success-bg);
+}
+
+.badge[data-status='PendingReview'] {
+  color: var(--color-primary);
+}
+
+.badge[data-status='Published'] {
+  color: var(--color-success);
+  background: var(--color-success-bg);
+}
+
+.badge[data-status='Rejected'],
+.badge[data-status='Suspended'] {
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+
+.info {
+  margin: 1rem 0;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.history {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.history li {
+  margin-bottom: 0.75rem;
+}
+
+.when {
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+.actions,
+.dialogActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.dialogActions {
+  justify-content: flex-end;
+}
+
+.primary,
+.secondary,
+.danger {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.primary {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-primary-text);
+  font-weight: 600;
+}
+
+.danger {
+  border-color: var(--color-danger);
+  background: var(--color-danger);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.primary:disabled,
+.secondary:disabled,
+.danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.formError {
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}

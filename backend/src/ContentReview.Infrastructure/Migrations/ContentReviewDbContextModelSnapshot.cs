@@ -145,6 +145,10 @@ namespace ContentReview.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("version");
 
+                    b.Property<DateTimeOffset?>("WithdrawnAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("withdrawn_at");
+
                     b.HasKey("Id")
                         .HasName("pk_article_submissions");
 

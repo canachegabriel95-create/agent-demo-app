@@ -37,6 +37,13 @@ public sealed record UpdateArticleRequest
     public uint? Version { get; init; }
 }
 
+public sealed record ArticleTransitionRequest
+{
+    /// <summary>The <c>version</c> of the article the author was looking at.</summary>
+    [Required]
+    public uint? Version { get; init; }
+}
+
 /// <summary>An author's own articles. Somebody else's article is a 404, exactly like one that does not exist.</summary>
 [Route("api/articles")]
 public sealed class ArticlesController(IArticleService articles, ICurrentUser currentUser) : AuthorControllerBase
@@ -109,4 +116,38 @@ public sealed class ArticlesController(IArticleService articles, ICurrentUser cu
         await articles.DeleteAsync(currentUser.UserId, id, version!.Value, cancellationToken);
         return NoContent();
     }
+
+    /// <summary>Sends a Draft for review, or resubmits a Rejected article.</summary>
+    /// <remarks>
+    /// Runs the full submission rules (title 5-150, summary 20-500, body 100-20000, a category): a 400 lists every
+    /// broken field and changes nothing. On success the article is PendingReview, <c>submissionVersion</c> goes up by
+    /// one and a snapshot of what was submitted is stored. 409 when the status does not allow it, when
+    /// <c>version</c> is stale (with <c>currentVersion</c>), or when another request changed the article first.
+    /// </remarks>
+    [HttpPost("{id:guid}/submit")]
+    [ProducesResponseType<ArticleDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ArticleDto>> Submit(
+        Guid id, ArticleTransitionRequest request, CancellationToken cancellationToken) =>
+        Ok(await articles.SubmitAsync(currentUser.UserId, id, request.Version!.Value, cancellationToken));
+
+    /// <summary>Takes an article back from review.</summary>
+    /// <remarks>
+    /// Only a PendingReview article can be withdrawn: it becomes a Draft again and its submission is marked withdrawn.
+    /// If an administrator decides at the same moment exactly one of the two succeeds and the other gets 409.
+    /// </remarks>
+    [HttpPost("{id:guid}/withdraw")]
+    [ProducesResponseType<ArticleDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ArticleDto>> Withdraw(
+        Guid id, ArticleTransitionRequest request, CancellationToken cancellationToken) =>
+        Ok(await articles.WithdrawAsync(currentUser.UserId, id, request.Version!.Value, cancellationToken));
 }

@@ -19,4 +19,6 @@ public static class AuditActions
     public const string AdminProfileEdited = "AdminProfileEdited";
     public const string UserSuspended = "UserSuspended";
     public const string UserReactivated = "UserReactivated";
+    public const string ArticleSubmitted = "ArticleSubmitted";
+    public const string ArticleWithdrawn = "ArticleWithdrawn";
 }

@@ -21,6 +21,9 @@ public class ArticleSubmission
     public Guid CategoryId { get; private set; }
     public DateTimeOffset SubmittedAt { get; private set; }
 
+    /// <summary>When the author took this submission back from review; <c>null</c> while it was not withdrawn.</summary>
+    public DateTimeOffset? WithdrawnAt { get; private set; }
+
     public static ArticleSubmission Create(
         Guid articleId,
         int version,
@@ -47,4 +50,7 @@ public class ArticleSubmission
             SubmittedAt = Guard.Utc(submittedAt),
         };
     }
+
+    /// <summary>Marks the submission as taken back by its author. The snapshot itself never changes.</summary>
+    public void MarkWithdrawn(DateTimeOffset now) => WithdrawnAt = Guard.Utc(now);
 }

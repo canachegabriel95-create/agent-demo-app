@@ -1,15 +1,18 @@
 using ContentReview.Domain.Articles;
+using ContentReview.Domain.Auditing;
 using ContentReview.Domain.Entities;
 using ContentReview.Domain.Enums;
 using ContentReview.Domain.Exceptions;
 using ContentReview.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace ContentReview.Infrastructure.Articles;
 
-public sealed class ArticleService(ContentReviewDbContext db, TimeProvider timeProvider) : IArticleService
+public sealed class ArticleService(ContentReviewDbContext db, TimeProvider timeProvider, IAuditWriter audit) : IArticleService
 {
     public const string StaleVersionMessage = "The article was changed by someone else. Reload it and try again.";
+    public const string RaceMessage = "The article has changed. Refresh to see its current status.";
 
     public async Task<ArticleDto> CreateAsync(
         Guid authorId, string? title, string? summary, string? body, Guid? categoryId, CancellationToken cancellationToken = default)
@@ -87,6 +90,88 @@ public sealed class ArticleService(ContentReviewDbContext db, TimeProvider timeP
         {
             await transaction.RollbackAsync(cancellationToken);
             throw await StaleAsync(id, cancellationToken);
+        }
+    }
+
+    public async Task<ArticleDto> SubmitAsync(Guid authorId, Guid id, uint version, CancellationToken cancellationToken = default)
+    {
+        await EnsureActiveAuthorAsync(authorId, cancellationToken);
+        var article = await FindOwnedAsync(authorId, id, cancellationToken);
+
+        // Allowed in this status, then the copy the author looked at is still current, then the submission rules.
+        ArticleLifecycle.EnsureCanPerform(article.Status, ArticleAction.Submit, ActorKind.Owner);
+        if (article.Version != version)
+        {
+            throw new StaleVersionException(StaleVersionMessage, article.Version);
+        }
+
+        var now = timeProvider.GetUtcNow();
+        article.Submit(now);
+        db.ArticleSubmissions.Add(ArticleSubmission.Create(
+            article.Id,
+            article.SubmissionVersion,
+            article.Title,
+            article.Summary,
+            article.Body,
+            article.CategoryId!.Value,
+            now));
+        audit.Record(
+            AuditActions.ArticleSubmitted,
+            nameof(Article),
+            article.Id,
+            authorId,
+            new { articleId = article.Id, submissionVersion = article.SubmissionVersion });
+
+        await SaveTransitionAsync(article.Id, cancellationToken);
+        return await ToDtoAsync(article, cancellationToken);
+    }
+
+    public async Task<ArticleDto> WithdrawAsync(Guid authorId, Guid id, uint version, CancellationToken cancellationToken = default)
+    {
+        await EnsureActiveAuthorAsync(authorId, cancellationToken);
+        var article = await FindOwnedAsync(authorId, id, cancellationToken);
+
+        ArticleLifecycle.EnsureCanPerform(article.Status, ArticleAction.Withdraw, ActorKind.Owner);
+        if (article.Version != version)
+        {
+            throw new StaleVersionException(StaleVersionMessage, article.Version);
+        }
+
+        var now = timeProvider.GetUtcNow();
+        var submissionVersion = article.SubmissionVersion;
+        article.Withdraw(now);
+        var submission = await db.ArticleSubmissions
+            .FirstAsync(s => s.ArticleId == id && s.Version == submissionVersion, cancellationToken);
+        submission.MarkWithdrawn(now);
+        audit.Record(
+            AuditActions.ArticleWithdrawn,
+            nameof(Article),
+            article.Id,
+            authorId,
+            new { articleId = article.Id, submissionVersion });
+
+        await SaveTransitionAsync(article.Id, cancellationToken);
+        return await ToDtoAsync(article, cancellationToken);
+    }
+
+    /// <summary>
+    /// Saves a status change. The UPDATE only matches the <c>xmin</c> that was read, so when a withdraw, a decision or a
+    /// second submit got in first this one changes nothing and the author is told to refresh.
+    /// </summary>
+    private async Task SaveTransitionAsync(Guid id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new ConflictException(RaceMessage);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            // Two submits of the same version raced: the unique (article, submission version) index let one through.
+            throw new ConflictException(RaceMessage);
         }
     }
 

@@ -212,7 +212,7 @@ describe('edit profile', () => {
     const field = screen.getByRole('textbox', { name: /Display name/ });
     await user.clear(field);
     if (name) {
-      await user.type(field, name, { delay: null });
+      await user.type(field, name);
     }
 
     await user.click(screen.getByTestId('profile-save'));

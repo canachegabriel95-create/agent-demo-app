@@ -1,0 +1,15 @@
+{
+  "name": "content-review-e2e",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Playwright end-to-end tests that drive both portals against a running local stack.",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.3"
+  }
+}

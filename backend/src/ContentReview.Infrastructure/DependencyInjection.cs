@@ -57,6 +57,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthorProfileService, AuthorProfileService>();
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IArticleService, ArticleService>();
+        services.AddScoped<IMyArticlesService, MyArticlesService>();
 
         return services;
     }

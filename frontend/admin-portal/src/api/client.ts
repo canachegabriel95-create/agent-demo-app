@@ -150,7 +150,8 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
   }
 
   const error = toApiError(response, await readJson(response));
-  if (response.status === 401) {
+  // A 401 only means "your session ended" when a session was sent; a wrong password at login also returns 401.
+  if (response.status === 401 && token) {
     unauthorizedHandler();
   }
 

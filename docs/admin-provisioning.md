@@ -4,7 +4,7 @@ The platform has no public way to create an administrator: registration only cre
 
 Reference for the pieces used here: [password-hashing.md](password-hashing.md) (hash and password policy) and [database.md](database.md#provisioning-the-initial-administrator) (what the script does).
 
-> **Signing in:** the login API exists (`POST /api/auth/login`, see [authentication.md](authentication.md)), so you can already check the account with `curl`. The Admin Portal login page is delivered by story F03.3; until then the portal at http://localhost:5173 cannot sign you in.
+> **Signing in:** once the API and the Admin Portal are running (`scripts/start.sh`), sign in at http://localhost:5173 with the email and password from step 3. An Author account cannot sign in to the Admin Portal; it gets the same generic "Invalid email or password." message as a wrong password.
 
 ## 1. Prerequisites
 
@@ -119,7 +119,7 @@ Expected: one row per administrator created (not one per run), with `{"email": "
 
 ## 6. Check the login
 
-With the API running (`scripts/start.sh`), use the email and password from step 3:
+Open http://localhost:5173 and sign in. To check the API directly, use the email and password from step 3:
 
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' http://localhost:5080/api/auth/login \

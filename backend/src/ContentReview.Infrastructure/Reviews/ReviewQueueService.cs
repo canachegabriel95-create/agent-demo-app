@@ -16,42 +16,82 @@ public sealed class ReviewQueueService(ContentReviewDbContext db) : IReviewQueue
     public async Task<PagedResult<ReviewQueueItem>> ListQueueAsync(
         ReviewQueueFilter filter, CancellationToken cancellationToken = default)
     {
-        var pending = db.Articles.AsNoTracking().Where(a => a.Status == ArticleStatus.PendingReview);
+        var articles =
+            from a in db.Articles.AsNoTracking()
+            where a.Status == ArticleStatus.PendingReview
+            join u in db.Users.AsNoTracking() on a.AuthorId equals u.Id
+            join c in db.Categories.AsNoTracking() on a.CategoryId equals c.Id
+            select new QueueRow
+            {
+                ArticleId = a.Id,
+                RevisionId = null,
+                Kind = ReviewItemKind.Article,
+                Title = a.Title,
+                CategoryId = c.Id,
+                CategoryName = c.Name,
+                AuthorId = u.Id,
+                AuthorName = u.FullName,
+                AuthorStatus = u.Status,
+                SubmittedAt = a.SubmittedAt!.Value,
+                SubmissionVersion = a.SubmissionVersion,
+            };
+
+        var revisions =
+            from r in db.ArticleRevisions.AsNoTracking()
+            where r.Status == RevisionStatus.PendingReview
+            join a in db.Articles.AsNoTracking() on r.ArticleId equals a.Id
+            join u in db.Users.AsNoTracking() on a.AuthorId equals u.Id
+            join c in db.Categories.AsNoTracking() on r.CategoryId equals c.Id
+            select new QueueRow
+            {
+                ArticleId = a.Id,
+                RevisionId = r.Id,
+                Kind = ReviewItemKind.Revision,
+                Title = r.Title,
+                CategoryId = c.Id,
+                CategoryName = c.Name,
+                AuthorId = u.Id,
+                AuthorName = u.FullName,
+                AuthorStatus = u.Status,
+                SubmittedAt = r.SubmittedAt!.Value,
+                SubmissionVersion = r.SubmissionVersion,
+            };
+
+        var pending = articles.Concat(revisions);
         if (filter.AuthorId is { } authorId)
         {
-            pending = pending.Where(a => a.AuthorId == authorId);
+            pending = pending.Where(r => r.AuthorId == authorId);
         }
 
         if (filter.CategoryId is { } categoryId)
         {
-            pending = pending.Where(a => a.CategoryId == categoryId);
+            pending = pending.Where(r => r.CategoryId == categoryId);
         }
 
         var totalCount = await pending.CountAsync(cancellationToken);
 
         var ordered = filter.Direction == SortDirection.Desc
-            ? pending.OrderByDescending(a => a.SubmittedAt)
-            : pending.OrderBy(a => a.SubmittedAt);
+            ? pending.OrderByDescending(r => r.SubmittedAt)
+            : pending.OrderBy(r => r.SubmittedAt);
 
-        // The id breaks ties, so a page boundary never repeats or skips a row.
-        var rows = await (
-                from a in ordered.ThenBy(a => a.Id).Skip((filter.Page - 1) * filter.PageSize).Take(filter.PageSize)
-                join u in db.Users.AsNoTracking() on a.AuthorId equals u.Id
-                join c in db.Categories.AsNoTracking() on a.CategoryId equals c.Id
-                select new { a, u, c })
+        // The ids break ties, so a page boundary never repeats or skips a row.
+        var rows = await ordered
+            .ThenBy(r => r.ArticleId)
+            .ThenBy(r => r.RevisionId)
+            .Skip((filter.Page - 1) * filter.PageSize)
+            .Take(filter.PageSize)
             .ToListAsync(cancellationToken);
 
-        // Joining after the page was cut keeps the order; restore it explicitly because a join does not promise it.
-        var items = (filter.Direction == SortDirection.Desc
-                ? rows.OrderByDescending(r => r.a.SubmittedAt).ThenBy(r => r.a.Id)
-                : rows.OrderBy(r => r.a.SubmittedAt).ThenBy(r => r.a.Id))
+        var items = rows
             .Select(r => new ReviewQueueItem(
-                r.a.Id,
-                r.a.Title,
-                new ArticleCategory(r.c.Id, r.c.Name),
-                new QueueAuthor(r.u.Id, r.u.FullName, r.u.Status),
-                r.a.SubmittedAt!.Value,
-                r.a.SubmissionVersion))
+                r.ArticleId,
+                r.Title,
+                new ArticleCategory(r.CategoryId, r.CategoryName),
+                new QueueAuthor(r.AuthorId, r.AuthorName, r.AuthorStatus),
+                r.SubmittedAt,
+                r.SubmissionVersion,
+                r.Kind,
+                r.RevisionId))
             .ToList();
 
         return new PagedResult<ReviewQueueItem>(items, filter.Page, filter.PageSize, totalCount);
@@ -110,6 +150,65 @@ public sealed class ReviewQueueService(ContentReviewDbContext db) : IReviewQueue
             article.Version);
     }
 
+    public async Task<ReviewRevisionDetails> GetRevisionAsync(Guid revisionId, CancellationToken cancellationToken = default)
+    {
+        var revision = await db.ArticleRevisions.AsNoTracking().FirstOrDefaultAsync(r => r.Id == revisionId, cancellationToken);
+        if (revision is null || revision.SubmissionVersion == 0)
+        {
+            throw new NotFoundException();
+        }
+
+        var article = await db.Articles.AsNoTracking().FirstAsync(a => a.Id == revision.ArticleId, cancellationToken);
+        var author = await db.Users.AsNoTracking().FirstAsync(u => u.Id == article.AuthorId, cancellationToken);
+
+        var categoryIds = new[] { revision.CategoryId, article.CategoryId }.Where(id => id is not null).Select(id => id!.Value).ToList();
+        var categories = await db.Categories.AsNoTracking()
+            .Where(c => categoryIds.Contains(c.Id))
+            .ToDictionaryAsync(c => c.Id, c => new ArticleCategory(c.Id, c.Name), cancellationToken);
+
+        var history = await (
+                from r in db.RevisionReviews.AsNoTracking()
+                where r.RevisionId == revisionId
+                join u in db.Users.AsNoTracking() on r.ReviewerId equals u.Id
+                orderby r.SubmissionVersion descending, r.DecidedAt descending
+                select new RevisionReviewHistoryEntry(
+                    r.SubmissionVersion, r.Decision, r.Reason, r.DecidedAt, new ReviewerRef(u.Id, u.FullName)))
+            .ToListAsync(cancellationToken);
+
+        var blocked = revision.Status != RevisionStatus.PendingReview
+            ? $"Revision is not pending review (status {revision.Status})."
+            : author.Status != UserStatus.Active
+                ? SuspendedReason
+                : null;
+
+        // While a revision is pending, the content of the article is what readers see now.
+        var published = new PublishedContent(
+            article.Title,
+            article.Summary,
+            article.Body,
+            article.CategoryId is { } publishedCategory ? categories.GetValueOrDefault(publishedCategory) : null,
+            article.PublishedVersion,
+            article.PublishedAt!.Value);
+
+        return new ReviewRevisionDetails(
+            revision.Id,
+            revision.ArticleId,
+            revision.Number,
+            revision.Title,
+            revision.Summary,
+            revision.Body,
+            revision.CategoryId is { } category ? categories.GetValueOrDefault(category) : null,
+            revision.Status,
+            revision.SubmissionVersion,
+            revision.SubmittedAt!.Value,
+            published,
+            new ReviewArticleAuthor(author.Id, author.FullName, author.Email, author.Status),
+            history,
+            blocked is null,
+            blocked,
+            revision.Version);
+    }
+
     public async Task<IReadOnlyList<AuthorLookupItem>> LookupAuthorsAsync(
         string? search, CancellationToken cancellationToken = default)
     {
@@ -129,5 +228,21 @@ public sealed class ReviewQueueService(ContentReviewDbContext db) : IReviewQueue
             .Take(LookupLimit)
             .Select(u => new AuthorLookupItem(u.Id, u.FullName))
             .ToListAsync(cancellationToken);
+    }
+
+    // A class with initialisers (not a record built by its constructor): the queries above union and order by its members.
+    private sealed class QueueRow
+    {
+        public Guid ArticleId { get; init; }
+        public Guid? RevisionId { get; init; }
+        public ReviewItemKind Kind { get; init; }
+        public string Title { get; init; } = null!;
+        public Guid CategoryId { get; init; }
+        public string CategoryName { get; init; } = null!;
+        public Guid AuthorId { get; init; }
+        public string AuthorName { get; init; } = null!;
+        public UserStatus AuthorStatus { get; init; }
+        public DateTimeOffset SubmittedAt { get; init; }
+        public int SubmissionVersion { get; init; }
     }
 }

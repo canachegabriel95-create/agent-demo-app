@@ -176,10 +176,9 @@ public class FeedTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task The_detail_comes_from_the_approved_snapshot_not_from_the_article_row()
+    public async Task The_detail_shows_the_content_of_the_published_article_which_only_an_approved_revision_changes()
     {
         var id = await PublishAsync("As approved", _bobToken, body: new string('a', 150));
-        await _api.ExecuteAsync("UPDATE articles SET title = 'Changed later', body = 'Changed body' WHERE id = @id", ("id", id));
 
         var detail = await ReadAsync(await _api.SendAsync(HttpMethod.Get, $"/api/feed/{id}", _annToken));
 

@@ -59,9 +59,10 @@ public sealed record RejectRequest
 public sealed class AdminReviewsController(
     IReviewQueueService reviews, IReviewDecisionService decisions, ICurrentUser currentUser) : AdminControllerBase
 {
-    /// <summary>Lists the articles waiting for review.</summary>
+    /// <summary>Lists what is waiting for review: new submissions and revisions of published articles.</summary>
     /// <remarks>
-    /// Only PendingReview articles, oldest submission first by default. Filter with <c>authorId</c> and
+    /// PendingReview articles and PendingReview revisions together; <c>kind</c> (<c>Article</c> or <c>Revision</c>) tells
+    /// them apart and a revision also has its <c>revisionId</c>. Oldest submission first by default. Filter with <c>authorId</c> and
     /// <c>categoryId</c>; sort with <c>sort=submittedAt</c> and <c>direction=asc|desc</c>; page with <c>page</c> and
     /// <c>pageSize</c> (up to 100). Articles of suspended authors are included: each item carries the author's status.
     /// </remarks>

@@ -10,25 +10,22 @@ namespace ContentReview.Infrastructure.Articles;
 public sealed class FeedService(ContentReviewDbContext db) : IFeedService
 {
     /// <summary>
-    /// Every read starts here. The Published filter is part of the query itself, so no caller can forget it, and the
-    /// content is the submission the administrator approved (the article's own text is the same while it is read-only).
-    /// Whether the author is suspended does not matter.
+    /// Every read starts here. The Published filter is part of the query itself, so no caller can forget it. The content
+    /// is the article's own: it only ever changes when an administrator approves a revision, so it is always the latest
+    /// approved version, and a revision that is being edited or reviewed (or was rejected) never shows. Whether the
+    /// author is suspended does not matter.
     /// </summary>
     private IQueryable<Row> Published() =>
         from article in db.Articles.AsNoTracking()
-        where article.Status == ArticleStatus.Published && article.PublishedAt != null
-        join review in db.Reviews.AsNoTracking() on article.Id equals review.ArticleId
-        where review.Decision == ReviewDecision.Approved
-        join submission in db.ArticleSubmissions.AsNoTracking()
-            on new { review.ArticleId, Version = review.SubmissionVersion } equals new { submission.ArticleId, submission.Version }
+        where article.Status == ArticleStatus.Published && article.PublishedAt != null && article.CategoryId != null
         join author in db.Users.AsNoTracking() on article.AuthorId equals author.Id
         select new Row
         {
             Id = article.Id,
-            Title = submission.Title,
-            Summary = submission.Summary,
-            Body = submission.Body,
-            CategoryId = submission.CategoryId,
+            Title = article.Title,
+            Summary = article.Summary,
+            Body = article.Body,
+            CategoryId = article.CategoryId!.Value,
             AuthorName = author.FullName,
             PublishedAt = article.PublishedAt!.Value,
         };

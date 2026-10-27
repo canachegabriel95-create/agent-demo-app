@@ -57,6 +57,7 @@ public static class DependencyInjection
         services.AddScoped<IUserDirectoryService, UserDirectoryService>();
         services.AddScoped<IReviewQueueService, ReviewQueueService>();
         services.AddScoped<IReviewDecisionService, ReviewDecisionService>();
+        services.AddScoped<IRevisionDecisionService, RevisionDecisionService>();
         services.AddScoped<IUserManagementService, UserManagementService>();
         services.AddScoped<IAuthorProfileService, AuthorProfileService>();
         services.AddScoped<ICategoryService, CategoryService>();

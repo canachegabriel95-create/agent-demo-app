@@ -17,6 +17,8 @@ function stubSignedInApi() {
   return stubApi({
     'GET /api/auth/me': () => json({ ...AUTHOR, status: 'Active' }),
     'GET /health': (init, url) => health(init, url),
+    'GET /api/me/articles/stats': () =>
+      json({ draft: 0, pendingReview: 0, published: 0, rejected: 0 }),
   });
 }
 

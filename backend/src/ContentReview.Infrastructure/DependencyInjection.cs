@@ -39,14 +39,16 @@ public static class DependencyInjection
                     "Set the ConnectionStrings__Default environment variable (see .env.example).");
             }
 
-            options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention();
+            options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention().AddInterceptors(new AuditImmutabilityInterceptor());
         });
 
         services.AddOptions<AuthOptions>().BindConfiguration(AuthOptions.SectionName);
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<IPasswordHashingService, PasswordHashingService>();
         services.AddScoped<ISessionService, SessionService>();
-        services.TryAddScoped<IAuditWriter, NoOpAuditWriter>();
+        services.AddOptions<AuditOptions>().BindConfiguration(AuditOptions.SectionName);
+        services.TryAddSingleton<ICorrelationIdSource, NoCorrelationIdSource>();
+        services.TryAddScoped<IAuditWriter, AuditWriter>();
         services.AddScoped<IInvitationService, InvitationService>();
         services.AddScoped<IInvitationRedemptionService, InvitationRedemptionService>();
         services.AddScoped<IRegistrationService, RegistrationService>();

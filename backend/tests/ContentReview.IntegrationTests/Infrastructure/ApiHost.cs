@@ -59,7 +59,8 @@ public sealed class ApiHost : IAsyncDisposable
 
     public IServiceProvider Services => Factory.Inner.Services;
 
-    public static async Task<ApiHost> CreateAsync(PostgresFixture postgres, int loginAttemptsPerMinute = 1000)
+    /// <param name="realAudit">Keep the application's own audit writer (events are stored in <c>audit_events</c>) instead of the recording stand-in.</param>
+    public static async Task<ApiHost> CreateAsync(PostgresFixture postgres, int loginAttemptsPerMinute = 1000, bool realAudit = false)
     {
         var connectionString = await postgres.CreateDatabaseAsync();
         var clock = new FakeTimeProvider(new DateTimeOffset(2026, 10, 27, 9, 0, 0, TimeSpan.Zero));
@@ -80,8 +81,12 @@ public sealed class ApiHost : IAsyncDisposable
                 services.RemoveAll<TimeProvider>();
                 services.AddSingleton<TimeProvider>(clock);
                 services.AddSingleton<ILoggerProvider>(logs);
-                services.RemoveAll<IAuditWriter>();
-                services.AddSingleton<IAuditWriter>(audit);
+                if (!realAudit)
+                {
+                    services.RemoveAll<IAuditWriter>();
+                    services.AddSingleton<IAuditWriter>(audit);
+                }
+
                 services.AddControllers().AddApplicationPart(typeof(ApiHost).Assembly);
             });
         });

@@ -44,6 +44,10 @@ builder.Services.AddOptions<CorsOptions>()
 builder.Services.AddInfrastructure();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<ICorrelationIdAccessor, CorrelationIdAccessor>();
+builder.Services.AddSingleton<ContentReview.Infrastructure.Auditing.ICorrelationIdSource>(
+    provider => (CorrelationIdAccessor)provider.GetRequiredService<ICorrelationIdAccessor>());
+builder.Services.PostConfigure<ContentReview.Infrastructure.Auditing.AuditOptions>(
+    options => options.ThrowOnSensitiveDetails ??= builder.Environment.IsDevelopment());
 builder.Services.AddProblemDetails(options =>
     options.CustomizeProblemDetails = context =>
         context.ProblemDetails.Extensions["correlationId"] = CorrelationId.From(context.HttpContext));

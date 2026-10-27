@@ -37,8 +37,10 @@ describe('layout shell', () => {
     const banner = await screen.findByRole('banner');
     expect(within(banner).getByText('Content Review – Admin')).toBeInTheDocument();
     expect(
-      within(screen.getByRole('navigation', { name: 'Main' })).getAllByRole('link'),
-    ).toHaveLength(2);
+      within(screen.getByRole('navigation', { name: 'Main' }))
+        .getAllByRole('link')
+        .map((link) => link.textContent),
+    ).toEqual(['Home', 'Authors', 'Invitations']);
     expect(screen.getByRole('main')).toBeInTheDocument();
     expect(await screen.findByText(/API is Healthy/)).toBeInTheDocument();
   });

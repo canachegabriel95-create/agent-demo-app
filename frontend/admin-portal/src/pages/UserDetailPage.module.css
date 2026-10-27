@@ -1,0 +1,103 @@
+.back {
+  display: inline-block;
+  margin-bottom: 0.5rem;
+}
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.titleRow h1 {
+  margin: 0;
+}
+
+.card {
+  margin: 1rem 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+
+.card h2 {
+  margin-top: 0;
+  font-size: 1.125rem;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.4rem 1.25rem;
+  margin: 0;
+}
+
+.facts dt {
+  color: var(--color-muted);
+  font-weight: 600;
+}
+
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* User text is shown as text only: line breaks are kept, markup is never interpreted. */
+.bio {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.suspension {
+  border-color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tile {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+}
+
+.tileLabel {
+  display: block;
+  color: var(--color-muted);
+  font-weight: 600;
+}
+
+.tileValue {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.1rem 0.55rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.badge[data-status='Active'] {
+  color: var(--color-success);
+  background: var(--color-success-bg);
+}
+
+.badge[data-status='Suspended'] {
+  color: var(--color-danger);
+  background: var(--color-danger-bg);
+}

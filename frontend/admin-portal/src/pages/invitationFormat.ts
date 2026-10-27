@@ -13,3 +13,9 @@ export function describeError(error: unknown): { message: string; correlationId?
 
   return { message: 'Something went wrong. Please try again.' };
 }
+
+const date = new Intl.DateTimeFormat('en', { dateStyle: 'medium' });
+
+export function formatDate(iso: string): string {
+  return date.format(new Date(iso));
+}

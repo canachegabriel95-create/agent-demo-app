@@ -115,6 +115,37 @@ describe('Pagination', () => {
   });
 });
 
+describe('FormField reserved error space', () => {
+  it('keeps an empty, hidden line where the message will appear', () => {
+    const { container, rerender } = render(
+      <FormField label="Email" name="email" value="" onChange={vi.fn()} reserveErrorSpace />,
+    );
+    expect(container.querySelector('p[aria-hidden="true"]')).toBeInTheDocument();
+
+    rerender(
+      <FormField
+        label="Email"
+        name="email"
+        value=""
+        onChange={vi.fn()}
+        reserveErrorSpace
+        error="Bad."
+      />,
+    );
+
+    expect(container.querySelector('p[aria-hidden="true"]')).not.toBeInTheDocument();
+    expect(screen.getByText('Bad.')).toBeInTheDocument();
+  });
+
+  it('adds nothing unless asked', () => {
+    const { container } = render(
+      <FormField label="Email" name="email" value="" onChange={vi.fn()} />,
+    );
+
+    expect(container.querySelector('p')).not.toBeInTheDocument();
+  });
+});
+
 describe('FormField', () => {
   function Controlled(props: { error?: string; hint?: string; required?: boolean }) {
     const [value, setValue] = useState('');

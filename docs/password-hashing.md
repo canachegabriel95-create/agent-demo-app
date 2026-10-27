@@ -38,7 +38,7 @@ Behavior:
 | 1 | Password violates the policy; the rules are listed on stderr and nothing is printed on stdout |
 | 2 | Input error (empty stdin, redirected input without `--stdin`, mismatched confirmation, cancelled) |
 
-The generated hash is supplied to `db/scripts/provision-admin.sql`; see [Provisioning the initial administrator](database.md#provisioning-the-initial-administrator).
+The generated hash is supplied to `db/scripts/provision-admin.sql`; see [admin-provisioning.md](admin-provisioning.md).
 
 ## Tests
 

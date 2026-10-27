@@ -5,6 +5,8 @@ import { HomePage } from '../pages/HomePage';
 import { InvitationsPage } from '../pages/InvitationsPage';
 import { LoginPage } from '../pages/LoginPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
+import { UserDetailPage } from '../pages/UserDetailPage';
+import { UsersPage } from '../pages/UsersPage';
 import { Layout } from './Layout';
 
 export const appRoutes: RouteObject[] = [
@@ -23,6 +25,8 @@ export const appRoutes: RouteObject[] = [
         children: [
           { index: true, element: <HomePage /> },
           { path: 'invitations', element: <InvitationsPage /> },
+          { path: 'users', element: <UsersPage /> },
+          { path: 'users/:id', element: <UserDetailPage /> },
           { path: '*', element: <NotFoundPage /> },
         ],
       },

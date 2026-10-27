@@ -8,6 +8,7 @@ using ContentReview.Infrastructure.Persistence;
 using ContentReview.Infrastructure.Security;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 
 namespace ContentReview.IntegrationTests.Infrastructure;
@@ -25,9 +26,15 @@ public sealed class ApiHost : IAsyncDisposable
     private readonly ApiFactory _baseFactory;
     private readonly HttpClient _client;
 
-    private ApiHost(ApiFactory baseFactory, WebApplicationFactoryHolder factory, string connectionString, FakeTimeProvider clock)
+    private ApiHost(
+        ApiFactory baseFactory,
+        WebApplicationFactoryHolder factory,
+        string connectionString,
+        FakeTimeProvider clock,
+        CapturingLoggerProvider logs)
     {
         _baseFactory = baseFactory;
+        Logs = logs;
         Factory = factory;
         ConnectionString = connectionString;
         Clock = clock;
@@ -36,6 +43,10 @@ public sealed class ApiHost : IAsyncDisposable
 
     public string ConnectionString { get; }
     public FakeTimeProvider Clock { get; }
+
+    /// <summary>Everything the API logged, with scopes.</summary>
+    public CapturingLoggerProvider Logs { get; }
+
     internal WebApplicationFactoryHolder Factory { get; }
 
     public HttpClient Client => _client;
@@ -54,14 +65,19 @@ public sealed class ApiHost : IAsyncDisposable
                 ["Auth:LoginAttemptsPerMinute"] = loginAttemptsPerMinute.ToString(System.Globalization.CultureInfo.InvariantCulture),
             });
 
-        var factory = baseFactory.WithWebHostBuilder(builder => builder.ConfigureServices(services =>
+        var logs = new CapturingLoggerProvider();
+        var factory = baseFactory.WithWebHostBuilder(builder =>
         {
-            services.RemoveAll<TimeProvider>();
-            services.AddSingleton<TimeProvider>(clock);
-            services.AddControllers().AddApplicationPart(typeof(ApiHost).Assembly);
-        }));
+            builder.ConfigureServices(services =>
+            {
+                services.RemoveAll<TimeProvider>();
+                services.AddSingleton<TimeProvider>(clock);
+                services.AddSingleton<ILoggerProvider>(logs);
+                services.AddControllers().AddApplicationPart(typeof(ApiHost).Assembly);
+            });
+        });
 
-        return new ApiHost(baseFactory, new WebApplicationFactoryHolder(factory), connectionString, clock);
+        return new ApiHost(baseFactory, new WebApplicationFactoryHolder(factory), connectionString, clock, logs);
     }
 
     public async Task<User> SeedUserAsync(

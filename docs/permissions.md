@@ -19,6 +19,7 @@ A request is authenticated by the `Session` bearer scheme (see [authentication.m
 |---|---|
 | No token, invalid token, expired or revoked session, suspended user | `401` ProblemDetails, `WWW-Authenticate: Bearer` |
 | Valid token, wrong role for the route | `403` ProblemDetails |
+| No token and a URL that matches no endpoint (or the wrong method) | `401`, not `404`/`405`: the fallback policy answers first, so the route table is not disclosed |
 | Author asks for a resource owned by another author, or an id that does not exist | `404` ProblemDetails (identical, so the id is not disclosed) |
 
 ## Route groups

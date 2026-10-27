@@ -38,7 +38,7 @@ curl -s -X POST http://localhost:5080/api/auth/logout -H "Authorization: Bearer 
 
 ## Errors
 
-Authentication failures are RFC 9457 `application/problem+json`: `401` includes `WWW-Authenticate: Bearer`; an authenticated user without the required role gets `403`. Consistent correlation ids and exception mapping for the whole API are delivered by F14.2; role policies and ownership checks are described in [permissions.md](permissions.md).
+Authentication failures are RFC 9457 `application/problem+json`: `401` includes `WWW-Authenticate: Bearer`; an authenticated user without the required role gets `403`. Correlation ids and the error format of the whole API are described in [api.md](api.md); role policies and ownership checks in [permissions.md](permissions.md).
 
 Tokens and passwords are never logged; the API does not log request headers or bodies.
 

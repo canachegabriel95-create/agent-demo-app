@@ -76,7 +76,7 @@ describe('navigation', () => {
   it.each([
     ['My Articles', '/articles'],
     ['Feed', '/feed'],
-  ])('opens %s from the navigation (page arrives in a later story)', async (name, path) => {
+  ])('opens %s from the navigation', async (name, path) => {
     stubSignedInApi();
     const router = renderAt('/');
     await screen.findByTestId('logout-button');

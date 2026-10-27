@@ -3,7 +3,8 @@ import { AuthProvider } from '../auth/AuthProvider';
 import { RequireAuth } from '../auth/RequireAuth';
 import { ArticlePage } from '../pages/ArticlePage';
 import { ArticleEditorPage } from '../pages/ArticleEditorPage';
-import { ComingSoonPage } from '../pages/ComingSoonPage';
+import { FeedArticlePage } from '../pages/FeedArticlePage';
+import { FeedPage } from '../pages/FeedPage';
 import { HomePage } from '../pages/HomePage';
 import { MyArticlesPage } from '../pages/MyArticlesPage';
 import { LoginPage } from '../pages/LoginPage';
@@ -33,7 +34,8 @@ export const appRoutes: RouteObject[] = [
           { path: 'articles/new', element: <ArticleEditorPage /> },
           { path: 'articles/:id/edit', element: <ArticleEditorPage /> },
           { path: 'articles/:id', element: <ArticlePage /> },
-          { path: 'feed', element: <ComingSoonPage title="Feed" /> },
+          { path: 'feed', element: <FeedPage /> },
+          { path: 'feed/:id', element: <FeedArticlePage /> },
           { path: 'profile', element: <ProfilePage /> },
           { path: '*', element: <NotFoundPage /> },
         ],

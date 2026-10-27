@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using ContentReview.Domain.Auditing;
 using ContentReview.Domain.Entities;
 using ContentReview.Domain.Enums;
 using ContentReview.Domain.Security;
@@ -31,10 +32,12 @@ public sealed class ApiHost : IAsyncDisposable
         WebApplicationFactoryHolder factory,
         string connectionString,
         FakeTimeProvider clock,
-        CapturingLoggerProvider logs)
+        CapturingLoggerProvider logs,
+        RecordingAuditWriter audit)
     {
         _baseFactory = baseFactory;
         Logs = logs;
+        Audit = audit;
         Factory = factory;
         ConnectionString = connectionString;
         Clock = clock;
@@ -43,6 +46,9 @@ public sealed class ApiHost : IAsyncDisposable
 
     public string ConnectionString { get; }
     public FakeTimeProvider Clock { get; }
+
+    /// <summary>The audit events the API asked to record.</summary>
+    public RecordingAuditWriter Audit { get; }
 
     /// <summary>Everything the API logged, with scopes.</summary>
     public CapturingLoggerProvider Logs { get; }
@@ -66,6 +72,7 @@ public sealed class ApiHost : IAsyncDisposable
             });
 
         var logs = new CapturingLoggerProvider();
+        var audit = new RecordingAuditWriter();
         var factory = baseFactory.WithWebHostBuilder(builder =>
         {
             builder.ConfigureServices(services =>
@@ -73,11 +80,13 @@ public sealed class ApiHost : IAsyncDisposable
                 services.RemoveAll<TimeProvider>();
                 services.AddSingleton<TimeProvider>(clock);
                 services.AddSingleton<ILoggerProvider>(logs);
+                services.RemoveAll<IAuditWriter>();
+                services.AddSingleton<IAuditWriter>(audit);
                 services.AddControllers().AddApplicationPart(typeof(ApiHost).Assembly);
             });
         });
 
-        return new ApiHost(baseFactory, new WebApplicationFactoryHolder(factory), connectionString, clock, logs);
+        return new ApiHost(baseFactory, new WebApplicationFactoryHolder(factory), connectionString, clock, logs, audit);
     }
 
     public async Task<User> SeedUserAsync(
@@ -113,6 +122,17 @@ public sealed class ApiHost : IAsyncDisposable
         if (token is not null)
         {
             request.Headers.Authorization = new AuthenticationHeaderValue(scheme!, token);
+        }
+
+        return _client.SendAsync(request);
+    }
+
+    public Task<HttpResponseMessage> SendJsonAsync(HttpMethod method, string url, string? token, object? body)
+    {
+        var request = new HttpRequestMessage(method, url) { Content = JsonContent.Create(body) };
+        if (token is not null)
+        {
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
 
         return _client.SendAsync(request);

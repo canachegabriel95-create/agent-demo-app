@@ -79,3 +79,31 @@ Model-binding and `[ApiController]` validation errors need no code: they produce
 ## Tests
 
 `backend/tests/ContentReview.IntegrationTests/Errors/ErrorHandlingTests.cs` uses test-only endpoints (`ErrorProbes.cs`) that raise each kind of failure: status, title and shape for every row above, camelCase keys, no leaks in the 500 (also in Development), correlation id echo / replacement / length limit, the id in the log scope, no secrets in the logs, 404/405/401/403/429 shapes and CORS headers on errors.
+
+## Invitations (administrator)
+
+All routes are under `/api/admin/invitations` and need an Administrator token (no token: 401, Author token: 403).
+
+| Method | Route | Body / query | Success |
+|---|---|---|---|
+| POST | `/api/admin/invitations` | `{ email, validForDays? }` (1-30 days, default 7) | 201 `InvitationDto` + `Location` |
+| GET | `/api/admin/invitations` | `?email=&status=&page=&pageSize=` | 200 paged `InvitationDto`, newest first |
+| GET | `/api/admin/invitations/{id}` | | 200 `InvitationDto` |
+| POST | `/api/admin/invitations/{id}/revoke` | `{ version }` | 200 `InvitationDto` |
+
+```json
+{
+  "id": "…", "code": "7KQ2-M9XD-3TWA", "email": "new.author@example.com", "status": "Available",
+  "createdAt": "…", "createdBy": { "id": "…", "fullName": "Alice Admin" },
+  "expiresAt": "…", "revokedAt": null, "revokedBy": null, "usedAt": null, "usedBy": null, "version": 1234
+}
+```
+
+- **Codes** are 12 characters of the Crockford base32 alphabet (digits and letters without I, L, O, U) drawn from a cryptographic random generator and shown as `XXXX-XXXX-XXXX`. The full code is returned to administrators so it can be copied and shared; it is never written to audit events or logs.
+- **Status** is derived in one place, `Invitation.GetStatus(now)`: Used if `usedAt` is set, otherwise Revoked if `revokedAt` is set, otherwise Expired if `expiresAt <= now`, otherwise Available. The `status` filter uses the same rules as SQL predicates, so paging and `totalCount` are exact.
+- **Filters:** `email` matches any part of the invited address, ignoring case; `status` is `Available`, `Used`, `Expired` or `Revoked`. An unknown status, `page < 1` or a `pageSize` outside 1-100 is a 400.
+- **Create:** a 400 lists `email` and/or `validForDays`; an email that already belongs to a user is a 409 ("A user with this email already exists."). Several Available invitations may exist for the same email.
+- **Revoke:** only an Available invitation can be revoked. A Used, Expired or Revoked invitation, or a `version` that is no longer current, is a 409; so is the losing request of two simultaneous revokes. Reload the invitation and try again.
+- **Audit:** `InvitationCreated` and `InvitationRevoked` with details `{ email, codeSuffix }` (last 4 characters). Until the audit history story (F13.1) provides the real writer, `IAuditWriter` is a no-op (`NoOpAuditWriter`); the integration tests replace it with a recorder and check what would be written.
+
+Tests: `backend/tests/ContentReview.IntegrationTests/Invitations/AdminInvitationsTests.cs`, `backend/tests/ContentReview.UnitTests/Domain/InvitationCodeTests.cs`, `InvitationTests.cs`.

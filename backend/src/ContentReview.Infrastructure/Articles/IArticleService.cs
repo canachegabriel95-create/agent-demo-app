@@ -52,4 +52,8 @@ public interface IArticleService
     /// <exception cref="Domain.Exceptions.StaleVersionException"><paramref name="version"/> is no longer current (409).</exception>
     /// <exception cref="Domain.Exceptions.ConflictException">An administrator decided at the same time (409).</exception>
     Task<ArticleDto> WithdrawAsync(Guid authorId, Guid id, uint version, CancellationToken cancellationToken = default);
+
+    /// <summary>The decisions made on the article's submissions, newest first, without who made them.</summary>
+    /// <exception cref="Domain.Exceptions.NotFoundException">Unknown id, or somebody else's article.</exception>
+    Task<IReadOnlyList<ArticleReviewDto>> ListReviewsAsync(Guid authorId, Guid id, CancellationToken cancellationToken = default);
 }

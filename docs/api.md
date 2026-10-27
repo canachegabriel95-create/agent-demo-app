@@ -314,6 +314,7 @@ An author creates, reads, edits and deletes their **own** articles while they ar
 | GET | `/api/articles/{id}` | 200 `ArticleDto` |
 | PUT | `/api/articles/{id}` | 200 `ArticleDto` (new `version`) |
 | DELETE | `/api/articles/{id}?version=n` | 204 |
+| GET | `/api/articles/{id}/reviews` | 200 `[{ submissionVersion, decision, reason, decidedAt }]` |
 | POST | `/api/articles/{id}/submit` | 200 `ArticleDto` (PendingReview) |
 | POST | `/api/articles/{id}/withdraw` | 200 `ArticleDto` (Draft) |
 
@@ -377,4 +378,8 @@ A 400 lists every broken field (`errors.title|summary|body|categoryId`, plus `er
 
 **Audit.** `ArticleSubmitted` and `ArticleWithdrawn` are recorded with `{ articleId, submissionVersion }` and the author as actor, in the same unit of work as the change (the real writer arrives with F13.1; until then the no-op writer records nothing). Titles and bodies are never put in audit details.
 
-Tests: `backend/tests/ContentReview.IntegrationTests/Articles/ArticleSubmissionTests.cs`.
+### Review history
+
+`GET /api/articles/{id}/reviews` returns the administrators' decisions on the article's submissions, newest submission first: `[{ "submissionVersion": 2, "decision": "Approved", "reason": null, "decidedAt": "…" }, …]`. `reason` is set for rejections. **Who decided is never returned to authors.** An article with no decision yet returns `[]`. Somebody else's article, or an unknown id, is the same 404 as everywhere else (administrator token: 403, no token: 401).
+
+Tests: `backend/tests/ContentReview.IntegrationTests/Articles/ArticleSubmissionTests.cs`, `ArticleReviewsTests.cs`.

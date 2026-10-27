@@ -30,6 +30,23 @@ public sealed class ArticleService(ContentReviewDbContext db, TimeProvider timeP
     public async Task<ArticleDto> GetAsync(Guid authorId, Guid id, CancellationToken cancellationToken = default) =>
         await ToDtoAsync(await FindOwnedAsync(authorId, id, cancellationToken), cancellationToken);
 
+    public async Task<IReadOnlyList<ArticleReviewDto>> ListReviewsAsync(
+        Guid authorId, Guid id, CancellationToken cancellationToken = default)
+    {
+        // Ownership is decided before anything is read, so somebody else's article looks like one that does not exist.
+        if (!await db.Articles.AnyAsync(a => a.Id == id && a.AuthorId == authorId, cancellationToken))
+        {
+            throw new NotFoundException();
+        }
+
+        return await db.Reviews.AsNoTracking()
+            .Where(r => r.ArticleId == id)
+            .OrderByDescending(r => r.SubmissionVersion)
+            .ThenByDescending(r => r.DecidedAt)
+            .Select(r => new ArticleReviewDto(r.SubmissionVersion, r.Decision, r.Reason, r.DecidedAt))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<ArticleDto> UpdateAsync(
         Guid authorId,
         Guid id,

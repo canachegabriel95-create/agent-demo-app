@@ -1,9 +1,14 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Article } from '../api/articles';
+import type { Article, ArticleReviewEntry } from '../api/articles';
 import { AUTHOR, json, problem, renderAt, storeSession, stubApi } from '../test/authHelpers';
-import { DELETE_CONFLICT_MESSAGE } from './ArticlePage';
+import {
+  DELETE_CONFLICT_MESSAGE,
+  PENDING_NOTICE,
+  PUBLISHED_NOTICE,
+  STATUS_CONFLICT_MESSAGE,
+} from './ArticlePage';
 
 const SCRIPT = '<script>alert(1)</script>';
 const IMG = '<img src=x onerror=alert(1)>';
@@ -28,6 +33,10 @@ const DRAFT: Article = {
 let current: Article;
 let getResponse: () => Response;
 let deleteResponse: () => Response;
+let reviews: ArticleReviewEntry[];
+let reviewsResponse: () => Response;
+let submitResponse: () => Response;
+let withdrawResponse: () => Response;
 let fetchMock: ReturnType<typeof stubApi>;
 
 function deletes() {
@@ -39,10 +48,30 @@ beforeEach(() => {
   current = DRAFT;
   getResponse = () => json(current);
   deleteResponse = () => new Response(null, { status: 204 });
+  reviews = [];
+  reviewsResponse = () => json(reviews);
+  submitResponse = () =>
+    json({
+      ...current,
+      status: 'PendingReview',
+      submissionVersion: 1,
+      allowedActions: ['withdraw'],
+      version: 101,
+    });
+  withdrawResponse = () =>
+    json({
+      ...current,
+      status: 'Draft',
+      allowedActions: ['edit', 'delete', 'submit'],
+      version: 102,
+    });
   fetchMock = stubApi({
     'GET /api/auth/me': () => json(AUTHOR),
     'GET /api/articles/a1': () => getResponse(),
     'DELETE /api/articles/a1': () => deleteResponse(),
+    'GET /api/articles/a1/reviews': () => reviewsResponse(),
+    'POST /api/articles/a1/submit': () => submitResponse(),
+    'POST /api/articles/a1/withdraw': () => withdrawResponse(),
   });
 });
 
@@ -245,5 +274,260 @@ describe('deleting a draft', () => {
     const dialog = await screen.findByRole('dialog');
     expect(await within(dialog).findByRole('alert')).toBeVisible();
     expect(within(dialog).getByTestId('article-delete-confirm')).toBeEnabled();
+  });
+});
+
+const REJECTED: Article = {
+  ...DRAFT,
+  status: 'Rejected',
+  submissionVersion: 1,
+  allowedActions: ['edit', 'submit'],
+  latestReview: {
+    decision: 'Rejected',
+    reason: 'Needs more sources. <b>Really</b>',
+    decidedAt: '2026-10-27T12:00:00Z',
+  },
+};
+
+function posts(path: string) {
+  return fetchMock.mock.calls.filter(
+    ([input, init]) => init?.method === 'POST' && String(input).endsWith(path),
+  );
+}
+
+describe('lifecycle buttons follow allowedActions', () => {
+  it('offers "Submit for review" for a draft', async () => {
+    renderAt('/articles/a1');
+
+    expect(await screen.findByTestId('article-submit')).toHaveTextContent('Submit for review');
+    expect(screen.queryByTestId('article-withdraw')).not.toBeInTheDocument();
+  });
+
+  it('offers "Resubmit for review" for a rejected article', async () => {
+    current = REJECTED;
+    renderAt('/articles/a1');
+
+    expect(await screen.findByTestId('article-submit')).toHaveTextContent('Resubmit for review');
+    expect(screen.getByTestId('article-edit')).toBeVisible();
+    expect(screen.queryByTestId('article-delete')).not.toBeInTheDocument();
+  });
+
+  it('offers only "Withdraw submission" while pending review, with a notice', async () => {
+    current = { ...DRAFT, status: 'PendingReview', allowedActions: ['withdraw'] };
+    renderAt('/articles/a1');
+
+    expect(await screen.findByTestId('article-withdraw')).toHaveTextContent('Withdraw submission');
+    expect(screen.getByTestId('article-readonly-notice')).toHaveTextContent(PENDING_NOTICE);
+    expect(screen.queryByTestId('article-edit')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('article-delete')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('article-submit')).not.toBeInTheDocument();
+  });
+
+  it('shows a published article as read-only with no actions', async () => {
+    current = { ...DRAFT, status: 'Published', allowedActions: [] };
+    renderAt('/articles/a1');
+
+    expect(await screen.findByTestId('article-readonly-notice')).toHaveTextContent(
+      PUBLISHED_NOTICE,
+    );
+    expect(
+      screen.queryByRole('button', { name: /submit|withdraw|delete/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('article-edit')).not.toBeInTheDocument();
+  });
+});
+
+describe('submitting and withdrawing', () => {
+  it('asks first, then submits with the version and shows the new status', async () => {
+    renderAt('/articles/a1');
+    await userEvent.click(await screen.findByTestId('article-submit'));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Submit for review' });
+    expect(within(dialog).getByText(/read-only until an administrator decides/)).toBeVisible();
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus();
+    expect(posts('/submit')).toHaveLength(0);
+
+    await userEvent.click(within(dialog).getByTestId('article-submit-confirm'));
+
+    expect(await screen.findByTestId('article-flash')).toHaveTextContent('Submitted for review.');
+    expect(JSON.parse(String(posts('/submit')[0]![1]?.body))).toEqual({ version: 100 });
+    expect(screen.getByTestId('article-status-badge')).toHaveTextContent('Pending review');
+    expect(screen.getByTestId('article-withdraw')).toBeVisible();
+    expect(screen.queryByTestId('article-submit')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('article-edit')).not.toBeInTheDocument();
+  });
+
+  it('does nothing when the submit confirmation is cancelled', async () => {
+    renderAt('/articles/a1');
+    await userEvent.click(await screen.findByTestId('article-submit'));
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Cancel' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(posts('/submit')).toHaveLength(0);
+  });
+
+  it('lists each broken submission rule with a link to the editor on a 400', async () => {
+    submitResponse = () =>
+      json(
+        {
+          title: 'Validation',
+          status: 400,
+          errors: {
+            summary: ['Summary is required.'],
+            categoryId: ['Category is required.'],
+          },
+        },
+        400,
+        'application/problem+json',
+      );
+    renderAt('/articles/a1');
+    await userEvent.click(await screen.findByTestId('article-submit'));
+
+    await userEvent.click(await screen.findByTestId('article-submit-confirm'));
+
+    const panel = await screen.findByTestId('article-submit-errors');
+    expect(within(panel).getByText('Summary is required.')).toBeVisible();
+    expect(within(panel).getByText('Category is required.')).toBeVisible();
+    expect(within(panel).getByTestId('article-fix-in-editor')).toHaveAttribute(
+      'href',
+      '/articles/a1/edit',
+    );
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByTestId('article-status-badge')).toHaveTextContent('Draft');
+  });
+
+  it('asks the author to refresh on a 409 and reloads when they do', async () => {
+    submitResponse = () => problem(409, 'Conflict');
+    renderAt('/articles/a1');
+    await userEvent.click(await screen.findByTestId('article-submit'));
+    await userEvent.click(await screen.findByTestId('article-submit-confirm'));
+
+    expect(await screen.findByTestId('article-notice')).toHaveTextContent(STATUS_CONFLICT_MESSAGE);
+    current = { ...DRAFT, status: 'Published', allowedActions: [], version: 120 };
+
+    await userEvent.click(screen.getByTestId('article-refresh'));
+
+    expect(await screen.findByTestId('article-readonly-notice')).toHaveTextContent(
+      PUBLISHED_NOTICE,
+    );
+    expect(screen.queryByTestId('article-notice')).not.toBeInTheDocument();
+  });
+
+  it('withdraws after confirmation and offers the draft actions again', async () => {
+    current = {
+      ...DRAFT,
+      status: 'PendingReview',
+      submissionVersion: 1,
+      allowedActions: ['withdraw'],
+    };
+    renderAt('/articles/a1');
+    await userEvent.click(await screen.findByTestId('article-withdraw'));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Withdraw submission' });
+    expect(posts('/withdraw')).toHaveLength(0);
+    await userEvent.click(within(dialog).getByTestId('article-withdraw-confirm'));
+
+    expect(await screen.findByTestId('article-flash')).toHaveTextContent('Submission withdrawn.');
+    expect(JSON.parse(String(posts('/withdraw')[0]![1]?.body))).toEqual({ version: 100 });
+    expect(screen.getByTestId('article-status-badge')).toHaveTextContent('Draft');
+    expect(screen.getByTestId('article-submit')).toBeVisible();
+    expect(screen.getByTestId('article-edit')).toBeVisible();
+  });
+
+  it('tells the author to refresh when an administrator decided before the withdraw', async () => {
+    current = { ...DRAFT, status: 'PendingReview', allowedActions: ['withdraw'] };
+    withdrawResponse = () => problem(409, 'Conflict');
+    renderAt('/articles/a1');
+    await userEvent.click(await screen.findByTestId('article-withdraw'));
+
+    await userEvent.click(await screen.findByTestId('article-withdraw-confirm'));
+
+    expect(await screen.findByTestId('article-notice')).toHaveTextContent(STATUS_CONFLICT_MESSAGE);
+    expect(screen.getByTestId('article-refresh')).toBeVisible();
+  });
+
+  it('keeps the dialog open with the message for other failures', async () => {
+    submitResponse = () => problem(500, 'An unexpected error occurred.');
+    renderAt('/articles/a1');
+    await userEvent.click(await screen.findByTestId('article-submit'));
+
+    await userEvent.click(await screen.findByTestId('article-submit-confirm'));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(await within(dialog).findByRole('alert')).toBeVisible();
+    expect(within(dialog).getByTestId('article-submit-confirm')).toBeEnabled();
+  });
+});
+
+describe('rejection feedback and review history', () => {
+  it('shows the latest rejection with its date and reason as plain text, above the content', async () => {
+    current = REJECTED;
+    renderAt('/articles/a1');
+
+    const panel = await screen.findByTestId('article-review');
+    expect(panel).toHaveTextContent(/Rejected on .*2026/);
+    expect(screen.getByTestId('article-review-reason').textContent).toBe(
+      'Needs more sources. <b>Really</b>',
+    );
+    expect(panel.querySelector('b')).toBeNull();
+    expect(
+      panel.compareDocumentPosition(screen.getByTestId('article-view-body')) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('does not show a rejection panel for a draft that was withdrawn after a rejection', async () => {
+    current = { ...REJECTED, status: 'Draft', allowedActions: ['edit', 'delete', 'submit'] };
+    renderAt('/articles/a1');
+
+    await screen.findByTestId('article-status-badge');
+    expect(screen.queryByTestId('article-review')).not.toBeInTheDocument();
+  });
+
+  it('lists the decisions of every submission, newest first, without who decided', async () => {
+    current = { ...REJECTED, status: 'Published', allowedActions: [], submissionVersion: 2 };
+    reviews = [
+      {
+        submissionVersion: 2,
+        decision: 'Approved',
+        reason: null,
+        decidedAt: '2026-10-27T14:00:00Z',
+      },
+      {
+        submissionVersion: 1,
+        decision: 'Rejected',
+        reason: 'First round feedback.',
+        decidedAt: '2026-10-27T12:00:00Z',
+      },
+    ];
+    renderAt('/articles/a1');
+
+    const history = await screen.findByTestId('article-history');
+    const items = await within(history).findAllByRole('listitem');
+    expect(items).toHaveLength(2);
+    expect(items[0]).toHaveTextContent('Submission 2: Approved');
+    expect(items[1]).toHaveTextContent('Submission 1: Rejected');
+    expect(items[1]).toHaveTextContent('First round feedback.');
+  });
+
+  it('says so when there are no decisions yet', async () => {
+    renderAt('/articles/a1');
+
+    expect(await screen.findByText('No decisions yet.')).toBeVisible();
+  });
+
+  it('offers a retry when the history cannot be loaded', async () => {
+    reviewsResponse = () => problem(500, 'An unexpected error occurred.');
+    renderAt('/articles/a1');
+
+    expect(await screen.findByText('The review history could not be loaded.')).toBeVisible();
+    reviewsResponse = () => json(reviews);
+
+    await userEvent.click(
+      within(screen.getByTestId('article-history')).getByRole('button', { name: 'Try again' }),
+    );
+
+    expect(await screen.findByText('No decisions yet.')).toBeVisible();
   });
 });

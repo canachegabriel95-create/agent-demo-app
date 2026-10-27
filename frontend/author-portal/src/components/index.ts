@@ -5,3 +5,4 @@ export { LoadingState } from './LoadingState';
 export { Pagination } from './Pagination';
 export { PasswordRequirements } from './PasswordRequirements';
 export { Dialog } from './Dialog';
+export { ConfirmDialog } from './ConfirmDialog';

@@ -71,6 +71,19 @@ public sealed class ArticlesController(IArticleService articles, ICurrentUser cu
     public async Task<ActionResult<ArticleDto>> Get(Guid id, CancellationToken cancellationToken) =>
         Ok(await articles.GetAsync(currentUser.UserId, id, cancellationToken));
 
+    /// <summary>Lists the administrators' decisions on the article's submissions, newest first.</summary>
+    /// <remarks>
+    /// Each entry has the submission it belongs to, the decision, the reason (set when rejected) and when it was made.
+    /// Who decided is never returned to authors. Empty until the first decision.
+    /// </remarks>
+    [HttpGet("{id:guid}/reviews")]
+    [ProducesResponseType<IReadOnlyList<ArticleReviewDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<IReadOnlyList<ArticleReviewDto>>> ListReviews(Guid id, CancellationToken cancellationToken) =>
+        Ok(await articles.ListReviewsAsync(currentUser.UserId, id, cancellationToken));
+
     /// <summary>Replaces the content of a Draft or Rejected article.</summary>
     /// <remarks>
     /// 409 when the article cannot be edited in its status ("Article cannot be modified in status PendingReview.") and

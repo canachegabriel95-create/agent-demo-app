@@ -7,6 +7,11 @@ public sealed record ArticleCategory(Guid Id, string Name);
 /// <summary>The decision on the most recent submission that was reviewed.</summary>
 public sealed record LatestReview(ReviewDecision Decision, string? Reason, DateTimeOffset DecidedAt);
 
+/// <summary>
+/// One administrator decision on one submission, as the author sees it. The reviewer is deliberately not part of it.
+/// </summary>
+public sealed record ArticleReviewDto(int SubmissionVersion, ReviewDecision Decision, string? Reason, DateTimeOffset DecidedAt);
+
 /// <summary>An article as its author sees it.</summary>
 /// <param name="AllowedActions">What the author may do now, from the lifecycle state machine: <c>edit</c>, <c>delete</c>, <c>submit</c>, <c>withdraw</c>.</param>
 /// <param name="Version">Concurrency token: send it back when changing or deleting the article.</param>

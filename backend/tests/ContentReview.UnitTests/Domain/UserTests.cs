@@ -1,5 +1,6 @@
 using ContentReview.Domain.Entities;
 using ContentReview.Domain.Enums;
+using ContentReview.Domain.Exceptions;
 
 namespace ContentReview.UnitTests.Domain;
 
@@ -192,5 +193,122 @@ public class UserTests
 
         Assert.Throws<ArgumentException>(() => user.UpdateProfile(new string('n', 101), null, Later));
         Assert.Throws<ArgumentException>(() => user.UpdateProfile("Ann", new string('b', 1001), Later));
+    }
+
+    // ---- suspension ----
+
+    private const string Reason = "Posted spam links repeatedly.";
+
+    [Fact]
+    public void Suspend_stores_the_trimmed_reason_and_the_utc_time_and_changes_the_status()
+    {
+        var user = Author();
+
+        user.Suspend("  " + Reason + "  ", Later);
+
+        Assert.Equal(UserStatus.Suspended, user.Status);
+        Assert.Equal(Reason, user.SuspensionReason);
+        Assert.Equal(Later.ToUniversalTime(), user.SuspendedAt);
+        Assert.Equal(TimeSpan.Zero, user.SuspendedAt!.Value.Offset);
+        Assert.Equal(Later.ToUniversalTime(), user.UpdatedAt);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("         ")]
+    [InlineData("too short")]
+    public void Suspend_rejects_a_missing_or_short_reason_and_changes_nothing(string? reason)
+    {
+        var user = Author();
+
+        Assert.Throws<ArgumentException>(() => user.Suspend(reason!, Later));
+
+        Assert.Equal(UserStatus.Active, user.Status);
+        Assert.Null(user.SuspensionReason);
+        Assert.Null(user.SuspendedAt);
+    }
+
+    [Fact]
+    public void Suspend_enforces_the_reason_limits_inclusively()
+    {
+        Author().Suspend(new string('r', 10), Later);
+        Author().Suspend(new string('r', 500), Later);
+
+        Assert.Throws<ArgumentException>(() => Author().Suspend(new string('r', 9), Later));
+        Assert.Throws<ArgumentException>(() => Author().Suspend(new string('r', 501), Later));
+    }
+
+    [Fact]
+    public void Suspending_twice_is_a_conflict_that_keeps_the_first_reason()
+    {
+        var user = Author();
+        user.Suspend(Reason, Later);
+
+        Assert.Throws<ConflictException>(() => user.Suspend("A different reason entirely.", Later.AddHours(1)));
+
+        Assert.Equal(Reason, user.SuspensionReason);
+        Assert.Equal(Later.ToUniversalTime(), user.SuspendedAt);
+    }
+
+    [Fact]
+    public void An_administrator_cannot_be_suspended_or_reactivated()
+    {
+        var admin = Create(role: UserRole.Administrator);
+
+        Assert.Throws<InvalidOperationException>(() => admin.Suspend(Reason, Later));
+        Assert.Throws<InvalidOperationException>(() => admin.Reactivate(Later));
+        Assert.Equal(UserStatus.Active, admin.Status);
+    }
+
+    [Fact]
+    public void Reactivate_makes_the_author_active_and_clears_the_reason_and_the_time()
+    {
+        var user = Author();
+        user.Suspend(Reason, Later);
+
+        user.Reactivate(Later.AddDays(1));
+
+        Assert.Equal(UserStatus.Active, user.Status);
+        Assert.Null(user.SuspensionReason);
+        Assert.Null(user.SuspendedAt);
+        Assert.Equal(Later.AddDays(1).ToUniversalTime(), user.UpdatedAt);
+    }
+
+    [Fact]
+    public void Reactivating_an_active_author_is_a_conflict()
+    {
+        var user = Author();
+
+        Assert.Throws<ConflictException>(() => user.Reactivate(Later));
+
+        Assert.Equal(UserStatus.Active, user.Status);
+    }
+
+    [Fact]
+    public void An_author_can_be_suspended_again_after_reactivation_with_a_new_reason()
+    {
+        var user = Author();
+        user.Suspend(Reason, Later);
+        user.Reactivate(Later.AddDays(1));
+
+        user.Suspend("Second offence, harassment.", Later.AddDays(2));
+
+        Assert.Equal("Second offence, harassment.", user.SuspensionReason);
+        Assert.Equal(Later.AddDays(2).ToUniversalTime(), user.SuspendedAt);
+    }
+
+    [Fact]
+    public void EnsureAuthorActive_passes_for_active_and_throws_forbidden_for_suspended_authors()
+    {
+        var user = Author();
+        user.EnsureAuthorActive();
+
+        user.Suspend(Reason, Later);
+
+        Assert.Throws<ForbiddenException>(user.EnsureAuthorActive);
+
+        user.Reactivate(Later.AddHours(1));
+        user.EnsureAuthorActive();
     }
 }

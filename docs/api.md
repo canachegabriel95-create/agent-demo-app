@@ -189,6 +189,8 @@ Administrators look up author accounts. Both routes need an Administrator token 
 | GET | `/api/admin/users` | 200 paged `{ items, page, pageSize, totalCount }` |
 | GET | `/api/admin/users/{id}` | 200 author details |
 | PUT | `/api/admin/users/{id}/profile` | 200 updated author details |
+| POST | `/api/admin/users/{id}/suspend` | 200 updated author details |
+| POST | `/api/admin/users/{id}/reactivate` | 200 updated author details |
 
 ### List
 
@@ -230,3 +232,31 @@ Tests: `backend/tests/ContentReview.IntegrationTests/Users/AdminUsersTests.cs`.
 - Audit: `AdminProfileEdited` with `{ targetUserId, changedFields }` (`fullName`, `bio`). The text itself is never written to the audit.
 
 Tests: `backend/tests/ContentReview.IntegrationTests/Users/AdminEditProfileTests.cs`, `UserTests` (unit).
+
+### Suspend
+
+`POST /api/admin/users/{id}/suspend`
+
+```json
+{ "reason": "Posted spam links repeatedly.", "version": 1234 }
+```
+
+- `reason` is required (trimmed, 10-500 characters). `version` is required.
+- In **one transaction**: status becomes `Suspended`, `suspensionReason` and `suspendedAt` are stored, **every session of the author is revoked**, and a `UserSuspended` audit event `{ targetUserId, reason }` is written. If any step fails nothing is kept.
+- Effect: the author's next request with an old token is 401, and signing in fails with the same generic 401 as a wrong password (no hint that the account exists or is suspended).
+- Articles, submissions and reviews are not touched.
+- Responses: 200 with the updated details; 400 with `errors.reason` (missing, or not 10-500 characters) or `errors.version`; 400 with `errors.id` = "Administrator accounts cannot be suspended." for an administrator's id (a documented choice: unlike the read endpoints, which hide administrators with a 404, an explicit refusal tells the caller why nothing happens); 401/403; 404 for an unknown id; 409 for a stale `version` and for an author who is already suspended ("The account is already suspended."). Two simultaneous requests with one version: exactly one wins.
+
+### Reactivate
+
+`POST /api/admin/users/{id}/reactivate`, body `{ "version": 1234 }`.
+
+- The status becomes `Active`; the reason and the time are cleared; a `UserReactivated` audit event `{ targetUserId }` is written.
+- Sessions revoked by the suspension **stay revoked**: the author signs in again.
+- Responses: 200 with the updated details; 400 for an administrator's id or a missing `version`; 401/403; 404 for an unknown id; 409 for a stale `version` and for an author who is not suspended ("The account is not suspended.").
+
+### Defence in depth
+
+Session validation already refuses suspended users. Services that change an author's content (articles, F08/F09) must additionally call `User.EnsureAuthorActive()`, which throws `ForbiddenException` (403) for a suspended account, so they do not depend on the session check alone.
+
+Tests: `backend/tests/ContentReview.IntegrationTests/Users/AdminSuspensionTests.cs`, `UserTests` (unit).

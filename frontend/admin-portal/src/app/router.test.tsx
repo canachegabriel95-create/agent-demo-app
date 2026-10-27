@@ -17,6 +17,14 @@ function stubSignedInApi() {
   return stubApi({
     'GET /api/auth/me': () => json({ ...ADMIN, status: 'Active' }),
     'GET /health': (init, url) => health(init, url),
+    'GET /api/admin/dashboard': () =>
+      json({
+        activeAuthors: 0,
+        suspendedAuthors: 0,
+        availableInvitations: 0,
+        pendingReviews: 0,
+        publishedArticles: 0,
+      }),
   });
 }
 

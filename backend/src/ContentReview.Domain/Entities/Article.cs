@@ -28,6 +28,13 @@ public class Article
     public int SubmissionVersion { get; private set; }
 
     public DateTimeOffset? SubmittedAt { get; private set; }
+
+    /// <summary>
+    /// Which published version of the content is live: 0 until first published, 1 after the first approval, plus one for
+    /// every approved revision. Replaced versions are kept in <see cref="ArticlePublishedVersion"/>.
+    /// </summary>
+    public int PublishedVersion { get; private set; }
+
     public DateTimeOffset? PublishedAt { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
@@ -132,7 +139,46 @@ public class Article
         var timestamp = Guard.Utc(now);
         Status = ArticleLifecycle.Next(Status, ArticleAction.Approve)!.Value;
         PublishedAt = timestamp;
+        PublishedVersion = 1;
         UpdatedAt = timestamp;
+    }
+
+    /// <summary>Whether the owner may start a revision (only a Published article). Throws the 409 conflict when not.</summary>
+    /// <exception cref="InvalidTransitionException">The article is not published.</exception>
+    public void EnsureCanRevise()
+    {
+        if (Status != ArticleStatus.Published)
+        {
+            throw new InvalidTransitionException($"Article cannot be revised in status {Status}.");
+        }
+    }
+
+    /// <summary>
+    /// Makes an approved revision the published content: the replaced version is returned as a snapshot for the history,
+    /// the content, <see cref="PublishedAt"/> and <see cref="PublishedVersion"/> move on, and the status stays Published.
+    /// Call it in the same transaction as <see cref="ArticleRevision.Approve"/>.
+    /// </summary>
+    /// <exception cref="InvalidTransitionException">The article is not published.</exception>
+    /// <exception cref="ArgumentException">The revision belongs to another article or was not approved.</exception>
+    public ArticlePublishedVersion ApplyRevision(ArticleRevision revision, DateTimeOffset now)
+    {
+        EnsureCanRevise();
+        if (revision.ArticleId != Id || revision.Status != RevisionStatus.Approved)
+        {
+            throw new ArgumentException("Only an approved revision of this article can be applied.", nameof(revision));
+        }
+
+        var timestamp = Guard.Utc(now);
+        var replaced = ArticlePublishedVersion.Capture(this, timestamp);
+
+        Title = revision.Title;
+        Summary = revision.Summary;
+        Body = revision.Body;
+        CategoryId = revision.CategoryId;
+        PublishedVersion++;
+        PublishedAt = timestamp;
+        UpdatedAt = timestamp;
+        return replaced;
     }
 
     /// <summary>An administrator sends the article back to its author. The reason is kept on the review, not here.</summary>

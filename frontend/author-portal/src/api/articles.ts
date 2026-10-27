@@ -70,3 +70,29 @@ export function updateArticle(
 export function deleteArticle(id: string, version: number): Promise<void> {
   return apiFetch<void>(`/api/articles/${id}?version=${version}`, { method: 'DELETE' });
 }
+
+/** An administrator's decision on one submission. Who decided is never sent to authors. */
+export interface ArticleReviewEntry {
+  submissionVersion: number;
+  decision: 'Approved' | 'Rejected';
+  reason: string | null;
+  decidedAt: string;
+}
+
+/** Newest submission first; empty until the first decision. */
+export function listReviews(id: string, signal?: AbortSignal): Promise<ArticleReviewEntry[]> {
+  return apiFetch<ArticleReviewEntry[]>(`/api/articles/${id}/reviews`, { signal });
+}
+
+/**
+ * Sends a Draft, or resubmits a Rejected article, for review. A 400 carries `errors.title|summary|body|categoryId`
+ * (the submission rules are stricter than the draft rules); a 409 means the article changed status or version.
+ */
+export function submitArticle(id: string, version: number): Promise<Article> {
+  return apiFetch<Article>(`/api/articles/${id}/submit`, { method: 'POST', body: { version } });
+}
+
+/** Takes a PendingReview article back; it becomes a Draft again. A 409 means an administrator decided first. */
+export function withdrawArticle(id: string, version: number): Promise<Article> {
+  return apiFetch<Article>(`/api/articles/${id}/withdraw`, { method: 'POST', body: { version } });
+}

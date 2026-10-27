@@ -1,8 +1,17 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { deleteArticle, getArticle, type Article, type ArticleStatus } from '../api/articles';
+import {
+  deleteArticle,
+  getArticle,
+  listReviews,
+  submitArticle,
+  withdrawArticle,
+  type Article,
+  type ArticleReviewEntry,
+  type ArticleStatus,
+} from '../api/articles';
 import { ApiError } from '../api/client';
-import { Dialog, EmptyState, ErrorState, LoadingState } from '../components';
+import { ConfirmDialog, EmptyState, ErrorState, LoadingState } from '../components';
 import styles from './ArticlePage.module.css';
 
 export const STATUS_LABELS: Record<ArticleStatus, string> = {
@@ -14,6 +23,10 @@ export const STATUS_LABELS: Record<ArticleStatus, string> = {
 
 export const DELETE_CONFLICT_MESSAGE =
   'The article was changed or can no longer be deleted. The latest version has been loaded.';
+export const STATUS_CONFLICT_MESSAGE = 'This article changed status. Refresh to continue.';
+export const PENDING_NOTICE =
+  'Pending review – read-only until an administrator decides or you withdraw it.';
+export const PUBLISHED_NOTICE = 'Published – this article is read-only.';
 
 const dateTime = new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -34,73 +47,6 @@ function when(value: string | null) {
   return value ? dateTime.format(new Date(value)) : undefined;
 }
 
-interface DeleteDialogProps {
-  article: Article;
-  onClose: () => void;
-  onDeleted: () => void;
-  onConflict: () => void;
-}
-
-function DeleteDraftDialog({ article, onClose, onDeleted, onConflict }: DeleteDialogProps) {
-  const cancelRef = useRef<HTMLButtonElement>(null);
-  const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState<Failure>();
-
-  async function confirm() {
-    setDeleting(true);
-    setError(undefined);
-    try {
-      await deleteArticle(article.id, article.version);
-      onDeleted();
-    } catch (failure) {
-      if (failure instanceof ApiError && failure.status === 409) {
-        onConflict();
-        return;
-      }
-
-      setError(describe(failure));
-      setDeleting(false);
-    }
-  }
-
-  return (
-    <Dialog title="Delete draft" onClose={onClose} busy={deleting} initialFocus={cancelRef}>
-      <p>Delete draft “{article.title}”? This cannot be undone.</p>
-      {error && (
-        <p className={styles.alert} role="alert">
-          {error.message}
-          {error.correlationId && (
-            <>
-              {' '}
-              Reference: <code>{error.correlationId}</code>
-            </>
-          )}
-        </p>
-      )}
-      <div className={styles.dialogActions}>
-        <button
-          ref={cancelRef}
-          type="button"
-          className={styles.secondary}
-          onClick={onClose}
-          disabled={deleting}
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          className={styles.danger}
-          onClick={confirm}
-          disabled={deleting}
-          data-testid="article-delete-confirm"
-        >
-          {deleting ? 'Deleting…' : 'Delete'}
-        </button>
-      </div>
-    </Dialog>
-  );
-}
-
 /** One of the author's own articles. Everything the author typed is shown as text, never as HTML. */
 export function ArticlePage() {
   const { id } = useParams();
@@ -109,8 +55,13 @@ export function ArticlePage() {
   const [article, setArticle] = useState<Article>();
   const [notFound, setNotFound] = useState(false);
   const [loadError, setLoadError] = useState<Failure>();
-  const [confirming, setConfirming] = useState(false);
+  const [dialog, setDialog] = useState<'delete' | 'submit' | 'withdraw'>();
   const [notice, setNotice] = useState('');
+  const [status, setStatus] = useState('');
+  const [submitErrors, setSubmitErrors] = useState<string[]>([]);
+  const [reviews, setReviews] = useState<ArticleReviewEntry[]>();
+  const [reviewsFailed, setReviewsFailed] = useState(false);
+  const [reviewsReload, setReviewsReload] = useState(0);
 
   useEffect(() => {
     if (!id) {
@@ -140,6 +91,74 @@ export function ArticlePage() {
 
     return () => controller.abort();
   }, [id, reload]);
+
+  const submissionVersion = article?.submissionVersion;
+  const articleStatus = article?.status;
+  useEffect(() => {
+    if (!id || submissionVersion === undefined) {
+      return;
+    }
+
+    const controller = new AbortController();
+    listReviews(id, controller.signal).then(
+      (loaded) => {
+        setReviews(loaded);
+        setReviewsFailed(false);
+      },
+      () => {
+        if (!controller.signal.aborted) {
+          setReviewsFailed(true);
+        }
+      },
+    );
+
+    return () => controller.abort();
+    // The history changes when a decision lands, which also changes the status or the submission count.
+  }, [id, submissionVersion, articleStatus, reviewsReload]);
+
+  function refresh() {
+    setNotice('');
+    setStatus('');
+    setSubmitErrors([]);
+    setReload((value) => value + 1);
+  }
+
+  /** Runs a lifecycle action. Returns a message when the dialog should stay open with it. */
+  async function transition(
+    action: (id: string, version: number) => Promise<Article>,
+    message: string,
+  ): Promise<string | undefined> {
+    if (!article) {
+      return undefined;
+    }
+
+    try {
+      const updated = await action(article.id, article.version);
+      setArticle(updated);
+      setNotice('');
+      setSubmitErrors([]);
+      setStatus(message);
+      setDialog(undefined);
+    } catch (failure) {
+      if (failure instanceof ApiError && failure.status === 400) {
+        const messages = Object.entries(failure.errors)
+          .filter(([field]) => field !== 'version')
+          .flatMap(([, texts]) => texts);
+        setSubmitErrors(messages.length > 0 ? messages : [describe(failure).message]);
+        setStatus('');
+        setDialog(undefined);
+      } else if (failure instanceof ApiError && failure.status === 409) {
+        setNotice(STATUS_CONFLICT_MESSAGE);
+        setStatus('');
+        setDialog(undefined);
+      } else {
+        const { message: text, correlationId } = describe(failure);
+        return correlationId ? `${text} Reference: ${correlationId}` : text;
+      }
+    }
+
+    return undefined;
+  }
 
   if (notFound) {
     return (
@@ -183,14 +202,65 @@ export function ArticlePage() {
   const can = (action: string) => article.allowedActions.includes(action);
   const submitted = when(article.submittedAt);
   const published = when(article.publishedAt);
+  const rejection = article.status === 'Rejected' ? article.latestReview : null;
+
+  async function confirmDelete(): Promise<string | undefined> {
+    if (!article) {
+      return undefined;
+    }
+
+    try {
+      await deleteArticle(article.id, article.version);
+      navigate('/articles', { state: { message: `Draft “${article.title}” deleted.` } });
+    } catch (failure) {
+      if (failure instanceof ApiError && failure.status === 409) {
+        setDialog(undefined);
+        setNotice(DELETE_CONFLICT_MESSAGE);
+        setReload((value) => value + 1);
+        return undefined;
+      }
+
+      const { message, correlationId } = describe(failure);
+      return correlationId ? `${message} Reference: ${correlationId}` : message;
+    }
+
+    return undefined;
+  }
 
   return (
     <section className={styles.root} aria-labelledby="article-heading">
       {notice && (
-        <p className={styles.alert} role="alert" data-testid="article-notice">
-          {notice}
-        </p>
+        <div className={styles.alert} role="alert" data-testid="article-notice">
+          <p>{notice}</p>
+          <button
+            type="button"
+            className={styles.secondary}
+            onClick={refresh}
+            data-testid="article-refresh"
+          >
+            Refresh
+          </button>
+        </div>
       )}
+      {submitErrors.length > 0 && (
+        <div className={styles.alert} role="alert" data-testid="article-submit-errors">
+          <p>This article cannot be submitted yet:</p>
+          <ul>
+            {submitErrors.map((message) => (
+              <li key={message}>{message}</li>
+            ))}
+          </ul>
+          {can('edit') && (
+            <Link to={`/articles/${article.id}/edit`} data-testid="article-fix-in-editor">
+              Fix in editor
+            </Link>
+          )}
+        </div>
+      )}
+      <div role="status" data-testid="article-flash">
+        {status && <p className={styles.success}>{status}</p>}
+      </div>
+
       <div className={styles.header}>
         <h1 id="article-heading" className={styles.title} data-testid="article-view-title">
           {article.title}
@@ -203,6 +273,29 @@ export function ArticlePage() {
           {STATUS_LABELS[article.status]}
         </span>
       </div>
+
+      {article.status === 'PendingReview' && (
+        <p className={styles.notice} data-testid="article-readonly-notice">
+          {PENDING_NOTICE}
+        </p>
+      )}
+      {article.status === 'Published' && (
+        <p className={styles.notice} data-testid="article-readonly-notice">
+          {PUBLISHED_NOTICE}
+        </p>
+      )}
+
+      {rejection && (
+        <div
+          className={styles.review}
+          role="region"
+          aria-label="Rejection"
+          data-testid="article-review"
+        >
+          <strong>Rejected on {when(rejection.decidedAt)}</strong>
+          {rejection.reason && <p data-testid="article-review-reason">{rejection.reason}</p>}
+        </div>
+      )}
 
       <dl className={styles.facts}>
         <dt>Category</dt>
@@ -225,28 +318,41 @@ export function ArticlePage() {
         )}
       </dl>
 
-      {article.latestReview?.decision === 'Rejected' && article.status === 'Rejected' && (
-        <div className={styles.review} data-testid="article-review">
-          <strong>Rejected on {when(article.latestReview.decidedAt)}</strong>
-          {article.latestReview.reason && <p>{article.latestReview.reason}</p>}
-        </div>
-      )}
-
       <div className={styles.actions}>
         {can('edit') && (
           <Link
             to={`/articles/${article.id}/edit`}
-            className={styles.primary}
+            className={styles.secondary}
             data-testid="article-edit"
           >
             Edit
           </Link>
         )}
+        {can('submit') && (
+          <button
+            type="button"
+            className={styles.primary}
+            onClick={() => setDialog('submit')}
+            data-testid="article-submit"
+          >
+            {article.status === 'Rejected' ? 'Resubmit for review' : 'Submit for review'}
+          </button>
+        )}
+        {can('withdraw') && (
+          <button
+            type="button"
+            className={styles.secondary}
+            onClick={() => setDialog('withdraw')}
+            data-testid="article-withdraw"
+          >
+            Withdraw submission
+          </button>
+        )}
         {can('delete') && (
           <button
             type="button"
             className={styles.secondary}
-            onClick={() => setConfirming(true)}
+            onClick={() => setDialog('delete')}
             data-testid="article-delete"
           >
             Delete
@@ -275,19 +381,88 @@ export function ArticlePage() {
         )}
       </div>
 
-      {confirming && (
-        <DeleteDraftDialog
-          article={article}
-          onClose={() => setConfirming(false)}
-          onDeleted={() =>
-            navigate('/articles', { state: { message: `Draft “${article.title}” deleted.` } })
+      <div className={styles.section} data-testid="article-history">
+        <h2>Review history</h2>
+        {reviewsFailed ? (
+          <p role="alert">
+            The review history could not be loaded.{' '}
+            <button
+              type="button"
+              className={styles.secondary}
+              onClick={() => {
+                setReviewsFailed(false);
+                setReviewsReload((value) => value + 1);
+              }}
+            >
+              Try again
+            </button>
+          </p>
+        ) : reviews === undefined ? (
+          <p className={styles.empty}>Loading the review history…</p>
+        ) : reviews.length === 0 ? (
+          <p className={styles.empty}>No decisions yet.</p>
+        ) : (
+          <ol className={styles.history}>
+            {reviews.map((review) => (
+              <li
+                key={`${review.submissionVersion}-${review.decidedAt}`}
+                data-decision={review.decision}
+              >
+                <strong>
+                  Submission {review.submissionVersion}: {review.decision}
+                </strong>{' '}
+                <span className={styles.when}>{when(review.decidedAt)}</span>
+                {review.reason && <p className={styles.text}>{review.reason}</p>}
+              </li>
+            ))}
+          </ol>
+        )}
+      </div>
+
+      {dialog === 'delete' && (
+        <ConfirmDialog
+          title="Delete draft"
+          confirmLabel="Delete"
+          busyLabel="Deleting…"
+          confirmTestId="article-delete-confirm"
+          variant="danger"
+          onClose={() => setDialog(undefined)}
+          onConfirm={confirmDelete}
+        >
+          <p>Delete draft “{article.title}”? This cannot be undone.</p>
+        </ConfirmDialog>
+      )}
+      {dialog === 'submit' && (
+        <ConfirmDialog
+          title={article.status === 'Rejected' ? 'Resubmit for review' : 'Submit for review'}
+          confirmLabel={article.status === 'Rejected' ? 'Resubmit' : 'Submit'}
+          busyLabel="Submitting…"
+          confirmTestId="article-submit-confirm"
+          onClose={() => setDialog(undefined)}
+          onConfirm={() => transition(submitArticle, 'Submitted for review.')}
+        >
+          <p>
+            Submit “{article.title}” for review? It becomes read-only until an administrator decides
+            or you withdraw it.
+          </p>
+        </ConfirmDialog>
+      )}
+      {dialog === 'withdraw' && (
+        <ConfirmDialog
+          title="Withdraw submission"
+          confirmLabel="Withdraw"
+          busyLabel="Withdrawing…"
+          confirmTestId="article-withdraw-confirm"
+          onClose={() => setDialog(undefined)}
+          onConfirm={() =>
+            transition(withdrawArticle, 'Submission withdrawn. The article is a draft again.')
           }
-          onConflict={() => {
-            setConfirming(false);
-            setNotice(DELETE_CONFLICT_MESSAGE);
-            setReload((value) => value + 1);
-          }}
-        />
+        >
+          <p>
+            Withdraw “{article.title}” from review? It becomes an editable draft again and you can
+            submit it later.
+          </p>
+        </ConfirmDialog>
       )}
     </section>
   );

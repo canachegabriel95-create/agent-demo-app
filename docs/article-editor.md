@@ -57,3 +57,32 @@ Delete opens a confirmation, "Delete draft “title”? This cannot be undone.",
 A missing article and somebody else's article both show "Article not found" with a link to My Articles (the API answers 404 for both).
 
 Tests: `frontend/author-portal/src/pages/ArticlePage.test.tsx`.
+
+# Lifecycle actions and rejection feedback (F09.3)
+
+## Buttons
+
+The action bar on `/articles/:id` follows `allowedActions` (the API's state machine, see [article-lifecycle.md](article-lifecycle.md)):
+
+| Status | Buttons | Notice |
+|---|---|---|
+| Draft | Edit, **Submit for review** (`article-submit`), Delete | |
+| PendingReview | **Withdraw submission** (`article-withdraw`) | "Pending review – read-only until an administrator decides or you withdraw it." |
+| Rejected | Edit, **Resubmit for review** | Rejection panel (below) |
+| Published | none | "Published – this article is read-only." |
+
+Submit and withdraw always ask first (`ConfirmDialog`: Cancel is focused; the confirm buttons are `article-submit-confirm` and `article-withdraw-confirm`). The submit dialog says the article becomes read-only until an administrator decides or the author withdraws it. After success the page shows the new status and a confirmation line.
+
+The editor also has the submit button (not for an article that was never saved). If the form has unsaved changes the dialog says they are saved first; the editor then saves (checking the draft rules locally) and submits the version that save returned, and goes to `/articles/:id`.
+
+## Errors
+
+- **400 on submit** (submission rules are stricter than draft rules): on the article page a panel lists every broken rule with a **Fix in editor** link; in the editor the messages appear on the fields (`title`, `summary`, `body`, `categoryId`). Nothing changed.
+- **409** (the status or version changed, e.g. an administrator decided first): "This article changed status. Refresh to continue." with a **Refresh** button (`article-refresh`) that reloads the article and its actions. In the editor the existing conflict dialog opens.
+- Other failures stay inside the dialog with the correlation id.
+
+## Rejection feedback and history
+
+A Rejected article shows a panel above the content: "Rejected on <date>" and the reason, as plain text. **Review history** lists every decision from `GET /api/articles/{id}/reviews` (newest submission first: "Submission 2: Rejected", date, reason). The reviewer's identity is never sent to authors. A load failure shows "The review history could not be loaded" with Try again.
+
+Tests: `ArticlePage.test.tsx`, `ArticleEditorPage.test.tsx`; backend `ArticleReviewsTests.cs`.

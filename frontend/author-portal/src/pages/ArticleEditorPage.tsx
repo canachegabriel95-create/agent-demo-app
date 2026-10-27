@@ -4,11 +4,12 @@ import { ApiError } from '../api/client';
 import {
   createArticle,
   getArticle,
+  submitArticle,
   updateArticle,
   type Article,
   type ArticleContent,
 } from '../api/articles';
-import { Dialog, ErrorState, FormField, LoadingState } from '../components';
+import { ConfirmDialog, Dialog, ErrorState, FormField, LoadingState } from '../components';
 import { useCategories } from '../hooks/useCategories';
 import {
   BODY_MAX,
@@ -70,6 +71,7 @@ export function ArticleEditorPage() {
   const [formError, setFormError] = useState<Failure>();
   const [conflict, setConflict] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [confirmingSubmit, setConfirmingSubmit] = useState(false);
   const [savedMessage, setSavedMessage] = useState(
     (location.state as { savedAt?: string } | null)?.savedAt ?? '',
   );
@@ -183,14 +185,7 @@ export function ArticleEditorPage() {
       if (failure instanceof ApiError && failure.status === 409) {
         setConflict(true);
       } else if (failure instanceof ApiError && failure.status === 400) {
-        const server = {
-          title: failure.errors.title?.[0],
-          summary: failure.errors.summary?.[0],
-          body: failure.errors.body?.[0],
-          categoryId: failure.errors.categoryId?.[0],
-        };
-        setErrors(server);
-        if (!server.title && !server.summary && !server.body && !server.categoryId) {
+        if (!showFieldErrors(failure)) {
           setFormError(describe(failure));
         }
       } else {
@@ -199,6 +194,65 @@ export function ArticleEditorPage() {
     } finally {
       setSaving(false);
     }
+  }
+
+  /** Puts the API's field messages (draft or submission rules) on the fields. Returns whether any field was named. */
+  function showFieldErrors(failure: ApiError) {
+    const server = {
+      title: failure.errors.title?.[0],
+      summary: failure.errors.summary?.[0],
+      body: failure.errors.body?.[0],
+      categoryId: failure.errors.categoryId?.[0],
+    };
+    setErrors(server);
+    return Boolean(server.title || server.summary || server.body || server.categoryId);
+  }
+
+  /** Saves what is on screen if it changed, then sends the article for review. Returns a message to keep the dialog open. */
+  async function confirmSubmit(): Promise<string | undefined> {
+    if (!article) {
+      return undefined;
+    }
+
+    setFormError(undefined);
+    setSavedMessage('');
+    try {
+      let current = article;
+      if (dirty) {
+        const found = validateDraft(title, summary, body);
+        setErrors(found);
+        if (found.title || found.summary || found.body) {
+          setConfirmingSubmit(false);
+          return undefined;
+        }
+
+        current = await updateArticle(
+          article.id,
+          { title, summary, body, categoryId: category },
+          article.version,
+        );
+        setArticle(current);
+      }
+
+      await submitArticle(current.id, current.version);
+      leaving.current = true;
+      navigate(`/articles/${current.id}`, { replace: true });
+    } catch (failure) {
+      if (failure instanceof ApiError && failure.status === 409) {
+        setConfirmingSubmit(false);
+        setConflict(true);
+      } else if (failure instanceof ApiError && failure.status === 400) {
+        setConfirmingSubmit(false);
+        if (!showFieldErrors(failure)) {
+          setFormError(describe(failure));
+        }
+      } else {
+        const { message, correlationId } = describe(failure);
+        return correlationId ? `${message} Reference: ${correlationId}` : message;
+      }
+    }
+
+    return undefined;
   }
 
   function handleReload() {
@@ -350,11 +404,39 @@ export function ArticleEditorPage() {
           >
             {saving ? 'Saving…' : 'Save draft'}
           </button>
+          {article?.allowedActions.includes('submit') && (
+            <button
+              type="button"
+              className={styles.secondary}
+              disabled={locked}
+              onClick={() => setConfirmingSubmit(true)}
+              data-testid="article-submit"
+            >
+              {article.status === 'Rejected' ? 'Resubmit for review' : 'Submit for review'}
+            </button>
+          )}
           <div role="status" data-testid="article-status">
             {savedMessage && !dirty && <p className={styles.success}>{savedMessage}</p>}
           </div>
         </div>
       </form>
+
+      {confirmingSubmit && article && (
+        <ConfirmDialog
+          title={article.status === 'Rejected' ? 'Resubmit for review' : 'Submit for review'}
+          confirmLabel={article.status === 'Rejected' ? 'Resubmit' : 'Submit'}
+          busyLabel="Submitting…"
+          confirmTestId="article-submit-confirm"
+          onClose={() => setConfirmingSubmit(false)}
+          onConfirm={confirmSubmit}
+        >
+          <p>
+            Submit “{title.trim() || article.title}” for review? It becomes read-only until an
+            administrator decides or you withdraw it.
+            {dirty && ' Your unsaved changes are saved first.'}
+          </p>
+        </ConfirmDialog>
+      )}
 
       {conflict && (
         <Dialog title="Article changed elsewhere" onClose={() => setConflict(true)}>

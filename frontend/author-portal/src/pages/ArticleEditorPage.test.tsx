@@ -29,6 +29,7 @@ const DRAFT: Article = {
 
 let current: Article;
 let putResponse: () => Response;
+let submitResponse: () => Response;
 let fetchMock: ReturnType<typeof stubApi>;
 
 function calls(method: string) {
@@ -46,6 +47,8 @@ beforeEach(() => {
   storeSession();
   current = DRAFT;
   putResponse = () => json({ ...current, version: current.version + 1 });
+  submitResponse = () =>
+    json({ ...current, status: 'PendingReview', allowedActions: ['withdraw'], version: 200 });
   fetchMock = stubApi({
     'GET /api/auth/me': () => json(AUTHOR),
     'GET /api/categories': () => json(CATEGORIES),
@@ -62,6 +65,7 @@ beforeEach(() => {
       return json(current, 201);
     },
     'PUT /api/articles/a1': () => putResponse(),
+    'POST /api/articles/a1/submit': () => submitResponse(),
   });
 });
 
@@ -348,5 +352,101 @@ describe('a conflicting save', () => {
 
     await waitFor(() => expect(calls('PUT')).toHaveLength(2));
     expect(bodyOf(calls('PUT')[1]!).version).toBe(105);
+  });
+});
+
+describe('submitting from the editor', () => {
+  it('has no submit button for an article that does not exist yet', async () => {
+    renderAt('/articles/new');
+    await screen.findByTestId('article-title');
+
+    expect(screen.queryByTestId('article-submit')).not.toBeInTheDocument();
+  });
+
+  it('offers "Resubmit for review" for a rejected article', async () => {
+    current = { ...DRAFT, status: 'Rejected', allowedActions: ['edit', 'submit'] };
+    renderAt('/articles/a1/edit');
+
+    expect(await screen.findByTestId('article-submit')).toHaveTextContent('Resubmit for review');
+  });
+
+  it('asks first and goes to the article page once it is submitted', async () => {
+    const router = renderAt('/articles/a1/edit');
+    await userEvent.click(await screen.findByTestId('article-submit'));
+
+    const dialog = await screen.findByRole('dialog', { name: 'Submit for review' });
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toHaveFocus();
+    expect(calls('POST')).toHaveLength(0);
+    await userEvent.click(within(dialog).getByTestId('article-submit-confirm'));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/articles/a1'));
+    expect(calls('POST')).toHaveLength(1);
+    expect(calls('PUT')).toHaveLength(0);
+    expect(bodyOf(calls('POST')[0]!)).toEqual({ version: 100 });
+  });
+
+  it('saves unsaved changes first and submits the version that save returned', async () => {
+    const router = renderAt('/articles/a1/edit');
+    const title = await screen.findByTestId('article-title');
+    await userEvent.type(title, ' changed');
+    await userEvent.click(screen.getByTestId('article-submit'));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText(/Your unsaved changes are saved first/)).toBeVisible();
+
+    await userEvent.click(within(dialog).getByTestId('article-submit-confirm'));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/articles/a1'));
+    expect(bodyOf(calls('PUT')[0]!)).toMatchObject({ title: 'Stored title changed', version: 100 });
+    expect(bodyOf(calls('POST')[0]!)).toEqual({ version: 101 });
+  });
+
+  it('does not submit when the unsaved text breaks a draft rule', async () => {
+    renderAt('/articles/a1/edit');
+    const title = await screen.findByTestId('article-title');
+    await userEvent.clear(title);
+    await userEvent.click(screen.getByTestId('article-submit'));
+
+    await userEvent.click(await screen.findByTestId('article-submit-confirm'));
+
+    expect(await screen.findByText('Title is required.')).toBeVisible();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(calls('PUT')).toHaveLength(0);
+    expect(calls('POST')).toHaveLength(0);
+  });
+
+  it('shows the submission rules the API reports on the fields', async () => {
+    submitResponse = () =>
+      json(
+        {
+          title: 'Validation',
+          status: 400,
+          errors: {
+            summary: ['Summary must be between 20 and 500 characters.'],
+            categoryId: ['Category is required.'],
+          },
+        },
+        400,
+        'application/problem+json',
+      );
+    const router = renderAt('/articles/a1/edit');
+    await userEvent.click(await screen.findByTestId('article-submit'));
+
+    await userEvent.click(await screen.findByTestId('article-submit-confirm'));
+
+    expect(await screen.findByText('Summary must be between 20 and 500 characters.')).toBeVisible();
+    expect(screen.getByText('Category is required.')).toBeVisible();
+    expect(screen.getByTestId('article-summary')).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/articles/a1/edit');
+  });
+
+  it('opens the conflict dialog when the article changed status meanwhile', async () => {
+    submitResponse = () => problem(409, 'Conflict');
+    renderAt('/articles/a1/edit');
+    await userEvent.click(await screen.findByTestId('article-submit'));
+
+    await userEvent.click(await screen.findByTestId('article-submit-confirm'));
+
+    expect(await screen.findByRole('dialog', { name: 'Article changed elsewhere' })).toBeVisible();
   });
 });

@@ -29,9 +29,23 @@ public sealed class UserListQuery
     public int PageSize { get; init; } = PagedResult<UserListItem>.DefaultPageSize;
 }
 
+public sealed record UpdateProfileRequest
+{
+    /// <summary>Display name, 2-100 characters after trimming.</summary>
+    public string? FullName { get; init; }
+
+    /// <summary>Biography, at most 1000 characters. <c>null</c> or empty clears it.</summary>
+    public string? Bio { get; init; }
+
+    /// <summary>The <c>version</c> of the author the administrator was looking at.</summary>
+    [Required]
+    public uint? Version { get; init; }
+}
+
 /// <summary>Administrators look up author accounts. Administrators themselves are not listed.</summary>
 [Route("api/admin/users")]
-public sealed class AdminUsersController(IUserDirectoryService users) : AdminControllerBase
+public sealed class AdminUsersController(
+    IUserDirectoryService users, IUserManagementService management, ICurrentUser currentUser) : AdminControllerBase
 {
     /// <summary>Lists author accounts.</summary>
     /// <remarks>
@@ -69,4 +83,21 @@ public sealed class AdminUsersController(IUserDirectoryService users) : AdminCon
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<UserDetails>> Get(Guid id, CancellationToken cancellationToken) =>
         Ok(await users.GetAsync(id, cancellationToken));
+
+    /// <summary>Corrects an author's display name and biography.</summary>
+    /// <remarks>
+    /// Only these two fields can be changed here: an email, role, status or password in the body is ignored. Works for
+    /// Active and Suspended authors. 409 when <c>version</c> is stale. 404 for an administrator's id.
+    /// </remarks>
+    [HttpPut("{id:guid}/profile")]
+    [ProducesResponseType<UserDetails>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<UserDetails>> UpdateProfile(
+        Guid id, UpdateProfileRequest request, CancellationToken cancellationToken) =>
+        Ok(await management.UpdateProfileAsync(
+            id, request.FullName, request.Bio, request.Version!.Value, currentUser.UserId, cancellationToken));
 }

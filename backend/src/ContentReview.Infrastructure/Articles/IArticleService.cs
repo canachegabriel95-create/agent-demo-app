@@ -34,4 +34,22 @@ public interface IArticleService
     /// <exception cref="Domain.Exceptions.InvalidTransitionException">The article is not a Draft (409).</exception>
     /// <exception cref="Domain.Exceptions.StaleVersionException"><paramref name="version"/> is no longer current (409).</exception>
     Task DeleteAsync(Guid authorId, Guid id, uint version, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends a Draft, or resubmits a Rejected article, for review: validates the submission rules, counts the submission
+    /// and stores a snapshot of what was submitted, in one transaction.
+    /// </summary>
+    /// <exception cref="Domain.Exceptions.NotFoundException">Unknown id, or somebody else's article.</exception>
+    /// <exception cref="Domain.Exceptions.InvalidTransitionException">The article cannot be submitted in its status (409).</exception>
+    /// <exception cref="Domain.Exceptions.StaleVersionException"><paramref name="version"/> is no longer current (409).</exception>
+    /// <exception cref="Domain.Exceptions.ValidationException">The article does not meet the submission rules (400).</exception>
+    /// <exception cref="Domain.Exceptions.ConflictException">Another request changed the article at the same time (409).</exception>
+    Task<ArticleDto> SubmitAsync(Guid authorId, Guid id, uint version, CancellationToken cancellationToken = default);
+
+    /// <summary>Takes an article back from review: it becomes a Draft and its current submission is marked withdrawn.</summary>
+    /// <exception cref="Domain.Exceptions.NotFoundException">Unknown id, or somebody else's article.</exception>
+    /// <exception cref="Domain.Exceptions.InvalidTransitionException">The article is not pending review (409).</exception>
+    /// <exception cref="Domain.Exceptions.StaleVersionException"><paramref name="version"/> is no longer current (409).</exception>
+    /// <exception cref="Domain.Exceptions.ConflictException">An administrator decided at the same time (409).</exception>
+    Task<ArticleDto> WithdrawAsync(Guid authorId, Guid id, uint version, CancellationToken cancellationToken = default);
 }

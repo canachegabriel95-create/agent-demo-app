@@ -306,7 +306,7 @@ Tests: `backend/tests/ContentReview.IntegrationTests/Categories/CategoriesTests.
 
 ## Articles (author)
 
-An author creates, reads, edits and deletes their **own** articles while they are drafts. Every route needs an Author token (no token: 401, Administrator token: 403, a suspended author's token: 401). The owner is always the session's user; `authorId`, `status`, `id`, `createdAt` and any other property in a body are ignored. Submitting, withdrawing, listing and the review decisions arrive with F09.2, F09.3, F11 and F10.
+An author creates, reads, edits and deletes their **own** articles while they are drafts. Every route needs an Author token (no token: 401, Administrator token: 403, a suspended author's token: 401). The owner is always the session's user; `authorId`, `status`, `id`, `createdAt` and any other property in a body are ignored. Listing and the review decisions arrive with F11 and F10.
 
 | Method | Route | Success |
 |---|---|---|
@@ -314,6 +314,8 @@ An author creates, reads, edits and deletes their **own** articles while they ar
 | GET | `/api/articles/{id}` | 200 `ArticleDto` |
 | PUT | `/api/articles/{id}` | 200 `ArticleDto` (new `version`) |
 | DELETE | `/api/articles/{id}?version=n` | 204 |
+| POST | `/api/articles/{id}/submit` | 200 `ArticleDto` (PendingReview) |
+| POST | `/api/articles/{id}/withdraw` | 200 `ArticleDto` (Draft) |
 
 ```json
 { "id": "…", "title": "My draft", "summary": "", "body": "",
@@ -351,3 +353,28 @@ Only a Draft can be deleted, and `version` (query) is required. Any review histo
 The service (`IArticleService`) repeats the author checks (an administrator's id: 404, a suspended author: 403), so the rules do not rest on the route policy alone.
 
 Tests: `backend/tests/ContentReview.IntegrationTests/Articles/ArticleDraftTests.cs`.
+
+### Submit and withdraw
+
+Both take `{ "version": n }` (required; the `version` last read) and answer 200 with the updated `ArticleDto`.
+
+**`POST /api/articles/{id}/submit`** sends a Draft, or resubmits a Rejected article, for review. In one transaction it checks the submission rules, adds 1 to `submissionVersion`, sets `status = PendingReview` and `submittedAt`, and stores a snapshot row in `article_submissions` (version, title, summary, body, category, submitted time). Earlier snapshots and reviews are never touched, so a resubmission keeps the decisions of earlier versions.
+
+| Field | Submission rule (after trimming; a body's minimum is counted after trimming too) |
+|---|---|
+| `title` | 5-150 characters |
+| `summary` | 20-500 |
+| `body` | 100-20000 |
+| `categoryId` | required |
+
+A 400 lists every broken field (`errors.title|summary|body|categoryId`, plus `errors.version`) and changes nothing.
+
+**`POST /api/articles/{id}/withdraw`** takes a PendingReview article back: it becomes a Draft again (editable, deletable) and the current submission row gets `withdrawn_at`. `submissionVersion` stays; the next submit makes the next version.
+
+**Checks, in order:** not found or not the caller's: 404; status does not allow the action: 409 `Article cannot be submitted in status Published.` / `Article cannot be withdrawn in status Draft.`; stale `version`: 409 with `currentVersion`; submission rules (submit only): 400.
+
+**Races.** Every transition updates the article only if its `xmin` is still the one that was read (`WHERE id = @id AND xmin = @version`), and a unique index on `(article_id, version)` backs up the snapshot row. So of several simultaneous submits, withdraws or an administrator's decision on the same version exactly one succeeds; the others get 409 `The article has changed. Refresh to see its current status.` (or the stale-version 409 when they read after the change). A repeated request with the same version is a 409 and creates no second row.
+
+**Audit.** `ArticleSubmitted` and `ArticleWithdrawn` are recorded with `{ articleId, submissionVersion }` and the author as actor, in the same unit of work as the change (the real writer arrives with F13.1; until then the no-op writer records nothing). Titles and bodies are never put in audit details.
+
+Tests: `backend/tests/ContentReview.IntegrationTests/Articles/ArticleSubmissionTests.cs`.

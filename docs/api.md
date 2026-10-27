@@ -386,13 +386,15 @@ Tests: `backend/tests/ContentReview.IntegrationTests/Articles/ArticleSubmissionT
 
 ## Review queue (administrator)
 
-Administrators read what is waiting for review and open one submission in detail. All routes need an Administrator token (author token: 403, no token: 401). Deciding (approve / reject) arrives with F10.2; there is no endpoint that edits an article's content.
+Administrators read what is waiting for review and open one submission in detail. All routes need an Administrator token (author token: 403, no token: 401). There is no endpoint that edits an article's content.
 
 | Method | Route | Success |
 |---|---|---|
 | GET | `/api/admin/reviews/queue` | 200 paged `ReviewQueueItem` |
 | GET | `/api/admin/articles/{id}` | 200 `ReviewArticleDetails` |
 | GET | `/api/admin/authors/lookup?search=` | 200 `[{ id, fullName }]` |
+| POST | `/api/admin/articles/{id}/approve` | 200 `ReviewArticleDetails` (Published) |
+| POST | `/api/admin/articles/{id}/reject` | 200 `ReviewArticleDetails` (Rejected) |
 
 ### Queue
 
@@ -430,4 +432,19 @@ Articles of **suspended authors stay in the queue**; `author.status` says `Suspe
 
 `GET /api/admin/authors/lookup?search=` returns up to 20 authors (any account status) whose name or email contains `search` (ignoring case, `%` and `_` literal, at most 100 characters), ordered by name. An empty search returns the first 20. Administrators are never listed.
 
-Tests: `backend/tests/ContentReview.IntegrationTests/Reviews/ReviewQueueTests.cs`.
+### Approve and reject
+
+```json
+{ "version": 1234, "submissionVersion": 2 }                       // approve
+{ "version": 1234, "submissionVersion": 2, "reason": "…" }        // reject (reason 10-1000 characters, trimmed)
+```
+
+`version` and `submissionVersion` are the ones in the detail the administrator opened (both required). The response is the updated `ReviewArticleDetails`. In one transaction the article becomes `Published` (`publishedAt` set) or `Rejected`, a `reviews` row is stored (article, submission version, reviewer, decision, reason, time) and an `ArticleApproved` / `ArticleRejected` audit event is written (`{ articleId, submissionVersion, reason? }`, the administrator as actor). The author then sees the decision through `latestReview` and the review history.
+
+**Checks, in order:** unknown article, or one that was never submitted: 404; author suspended: 409 `Review is blocked because the author account is suspended.`; article no longer PendingReview: 409; `submissionVersion` is not the current one (the author resubmitted): 409; stale `version`: 409; for reject only, an invalid reason: 400 (`errors.reason`). So a conflict is reported even when the reason is also wrong.
+
+**Every 409 here carries `currentStatus` and `currentVersion`** (extensions on the ProblemDetails) so the portal can say what the article is now.
+
+**One decision per submission.** The article UPDATE only matches the `xmin` that was read and `reviews` has a unique index on `(article_id, submission_version)`. Of simultaneous approvals, rejections, or a decision against the author's withdrawal, exactly one succeeds; the others get 409 `This article has changed since you opened it. Refresh to see its current status.` and no second review row exists.
+
+Tests: `backend/tests/ContentReview.IntegrationTests/Reviews/ReviewQueueTests.cs`, `ReviewDecisionTests.cs`.

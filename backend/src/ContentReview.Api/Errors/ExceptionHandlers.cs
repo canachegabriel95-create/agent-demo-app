@@ -35,6 +35,7 @@ public sealed class KnownExceptionHandler(IProblemDetailsService problems, ILogg
             },
             InvitationNotRedeemableException notRedeemable => InvitationNotRedeemable(notRedeemable.Reason),
             StaleVersionException stale => StaleVersion(stale),
+            ReviewConflictException review => ReviewConflict(review),
             ConflictException conflict => Conflict(conflict.Message),
             DbUpdateConcurrencyException => Conflict("The resource was changed by someone else. Reload it and try again."),
             DbUpdateException { InnerException: PostgresException { SqlState: UniqueViolation } } =>
@@ -66,6 +67,15 @@ public sealed class KnownExceptionHandler(IProblemDetailsService problems, ILogg
     {
         var details = Conflict(stale.Message);
         details.Extensions["currentVersion"] = stale.CurrentVersion;
+        return details;
+    }
+
+    /// <summary>409 that says what the article is now (<c>currentStatus</c>, <c>currentVersion</c>).</summary>
+    private static ProblemDetails ReviewConflict(ReviewConflictException review)
+    {
+        var details = Conflict(review.Message);
+        details.Extensions["currentStatus"] = review.CurrentStatus.ToString();
+        details.Extensions["currentVersion"] = review.CurrentVersion;
         return details;
     }
 

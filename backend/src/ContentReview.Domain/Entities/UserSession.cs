@@ -37,4 +37,26 @@ public class UserSession
             ExpiresAt = expires,
         };
     }
+
+    /// <summary>True while the session is neither revoked nor expired.</summary>
+    public bool IsValid(DateTimeOffset now) => RevokedAt is null && ExpiresAt > Guard.Utc(now);
+
+    /// <summary>Ends the session. Revoking an already revoked session keeps the original time.</summary>
+    public void Revoke(DateTimeOffset now) => RevokedAt ??= Guard.Utc(now);
+
+    /// <summary>
+    /// Records activity, but at most once per <paramref name="minInterval"/> so reads do not turn into writes.
+    /// Returns whether <see cref="LastSeenAt"/> changed.
+    /// </summary>
+    public bool TryMarkSeen(DateTimeOffset now, TimeSpan minInterval)
+    {
+        var timestamp = Guard.Utc(now);
+        if (LastSeenAt is { } last && timestamp - last < minInterval)
+        {
+            return false;
+        }
+
+        LastSeenAt = timestamp;
+        return true;
+    }
 }

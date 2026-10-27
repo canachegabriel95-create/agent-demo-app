@@ -1,9 +1,11 @@
 using ContentReview.Domain.Security;
 using ContentReview.Infrastructure.Persistence;
 using ContentReview.Infrastructure.Security;
+using ContentReview.Infrastructure.Sessions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace ContentReview.Infrastructure;
 
@@ -32,7 +34,10 @@ public static class DependencyInjection
             options.UseNpgsql(connectionString).UseSnakeCaseNamingConvention();
         });
 
+        services.AddOptions<AuthOptions>().BindConfiguration(AuthOptions.SectionName);
+        services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<IPasswordHashingService, PasswordHashingService>();
+        services.AddScoped<ISessionService, SessionService>();
 
         return services;
     }

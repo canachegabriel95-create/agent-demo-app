@@ -30,5 +30,12 @@ public sealed class MigratedDatabase : IAsyncDisposable
     public ContentReviewDbContext NewContext() =>
         _factory.Services.CreateScope().ServiceProvider.GetRequiredService<ContentReviewDbContext>();
 
-    public ValueTask DisposeAsync() => _factory.DisposeAsync();
+    public async ValueTask DisposeAsync()
+    {
+        await _factory.DisposeAsync();
+
+        // One pool per test database: release it so a long run does not exhaust max_connections.
+        using var connection = new Npgsql.NpgsqlConnection(ConnectionString);
+        Npgsql.NpgsqlConnection.ClearPool(connection);
+    }
 }

@@ -4,7 +4,7 @@ The platform has no public way to create an administrator: registration only cre
 
 Reference for the pieces used here: [password-hashing.md](password-hashing.md) (hash and password policy) and [database.md](database.md#provisioning-the-initial-administrator) (what the script does).
 
-> **Signing in:** the Admin Portal login screen needs the authentication endpoint (story F03.1). Until it is implemented you can create and verify the account (step 5) but not sign in. Once it is, sign in at http://localhost:5173 with the email and password from this guide.
+> **Signing in:** the login API exists (`POST /api/auth/login`, see [authentication.md](authentication.md)), so you can already check the account with `curl`. The Admin Portal login page is delivered by story F03.3; until then the portal at http://localhost:5173 cannot sign you in.
 
 ## 1. Prerequisites
 
@@ -116,6 +116,19 @@ SELECT action, entity_type, details FROM audit_events WHERE action = 'Administra
 ```
 
 Expected: one row per administrator created (not one per run), with `{"email": "you@example.com"}` and no password or hash.
+
+## 6. Check the login
+
+With the API running (`scripts/start.sh`), use the email and password from step 3:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:5080/api/auth/login \
+  -H 'Content-Type: application/json' -d '{"email":"you@example.com","password":"<password>","portal":"Admin"}'   # 200
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:5080/api/auth/login \
+  -H 'Content-Type: application/json' -d '{"email":"you@example.com","password":"<password>","portal":"Author"}'  # 401
+```
+
+An administrator can only sign in to the Admin portal; the same credentials on the Author portal return `401`.
 
 ## Security notes
 

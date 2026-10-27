@@ -152,6 +152,17 @@ describe('listing', () => {
 });
 
 describe('search, status and sort', () => {
+  it('keeps the search box and the status select the same height (no hint line under the box)', async () => {
+    await openPage();
+    await screen.findByRole('table');
+
+    const search = screen.getByRole('searchbox', { name: 'Search' });
+
+    expect(search).toHaveAttribute('placeholder', 'Name or email');
+    expect(search).not.toHaveAttribute('aria-describedby');
+    expect(search.parentElement!.querySelectorAll('p')).toHaveLength(0);
+  });
+
   it('updates the request and the address once typing pauses', async () => {
     const router = await openPage();
     await screen.findByRole('table');

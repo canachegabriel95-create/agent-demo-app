@@ -18,6 +18,14 @@
   margin-bottom: 0;
 }
 
+/* Native inputs, selects and buttons differ by a pixel or two; one height keeps the row on one line. */
+.filters input,
+.filters select,
+.filters button {
+  box-sizing: border-box;
+  height: 2.625rem;
+}
+
 .statusFilter {
   display: flex;
   flex-direction: column;

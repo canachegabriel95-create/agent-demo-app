@@ -14,6 +14,7 @@ export interface FormFieldProps {
   disabled?: boolean;
   maxLength?: number;
   autoComplete?: string;
+  placeholder?: string;
   hint?: string;
   /** Validation message. When set the field is marked invalid and the message is linked to it. */
   error?: string;
@@ -31,6 +32,7 @@ export function FormField({
   disabled = false,
   maxLength,
   autoComplete,
+  placeholder,
   hint,
   error,
 }: FormFieldProps) {
@@ -50,6 +52,7 @@ export function FormField({
     disabled,
     maxLength,
     autoComplete,
+    placeholder,
     'aria-invalid': error ? true : undefined,
     'aria-describedby': describedBy || undefined,
   } as const;

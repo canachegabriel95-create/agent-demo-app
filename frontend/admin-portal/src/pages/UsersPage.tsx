@@ -243,7 +243,7 @@ export function UsersPage() {
           name="search"
           type="search"
           autoComplete="off"
-          hint="Part of a name or an email"
+          placeholder="Name or email"
           value={searchInput}
           onChange={setSearchInput}
         />

@@ -53,3 +53,79 @@ export function lookupAuthors(search: string, signal?: AbortSignal): Promise<Aut
   const query = search ? `?search=${encodeURIComponent(search)}` : '';
   return apiFetch<AuthorLookupItem[]>(`/api/admin/authors/lookup${query}`, { signal });
 }
+
+export type ReviewArticleStatus = 'Draft' | 'PendingReview' | 'Published' | 'Rejected';
+
+export interface ReviewHistoryEntry {
+  submissionVersion: number;
+  decision: 'Approved' | 'Rejected';
+  reason: string | null;
+  decidedAt: string;
+  reviewer: { id: string; fullName: string };
+}
+
+/** An article as the administrator reviews it: the content is the submitted snapshot, not the author's draft. */
+export interface ReviewArticle {
+  id: string;
+  title: string;
+  summary: string;
+  body: string;
+  category: { id: string; name: string } | null;
+  status: ReviewArticleStatus;
+  submissionVersion: number;
+  submittedAt: string;
+  publishedAt: string | null;
+  author: { id: string; fullName: string; email: string; status: UserStatus };
+  reviewHistory: ReviewHistoryEntry[];
+  canReview: boolean;
+  reviewBlockedReason: string | null;
+  /** Concurrency token: send it back with the decision. */
+  version: number;
+}
+
+/** 404 for an unknown article and for one that was never submitted (a private draft). */
+export function getReviewArticle(id: string, signal?: AbortSignal): Promise<ReviewArticle> {
+  return apiFetch<ReviewArticle>(`/api/admin/articles/${encodeURIComponent(id)}`, { signal });
+}
+
+/**
+ * Publishes the article. A 409 means it changed since it was opened (the ProblemDetails carries `currentStatus`), or
+ * the author is suspended.
+ */
+export function approveArticle(
+  id: string,
+  version: number,
+  submissionVersion: number,
+): Promise<ReviewArticle> {
+  return apiFetch<ReviewArticle>(`/api/admin/articles/${encodeURIComponent(id)}/approve`, {
+    method: 'POST',
+    body: { version, submissionVersion },
+  });
+}
+
+export const REVIEW_REASON_MIN = 10;
+export const REVIEW_REASON_MAX = 1000;
+
+/** Sends the article back with a reason (10-1000 characters; a 400 carries `errors.reason`). */
+export function rejectArticle(
+  id: string,
+  version: number,
+  submissionVersion: number,
+  reason: string,
+): Promise<ReviewArticle> {
+  return apiFetch<ReviewArticle>(`/api/admin/articles/${encodeURIComponent(id)}/reject`, {
+    method: 'POST',
+    body: { version, submissionVersion, reason },
+  });
+}
+
+/** What the article is now, read from the 409 the API answered with; `undefined` for any other error. */
+export function currentStatusOf(error: unknown): string | undefined {
+  const body = (error as { body?: unknown } | null)?.body;
+  if (typeof body === 'object' && body !== null && 'currentStatus' in body) {
+    const value = (body as { currentStatus: unknown }).currentStatus;
+    return typeof value === 'string' ? value : undefined;
+  }
+
+  return undefined;
+}

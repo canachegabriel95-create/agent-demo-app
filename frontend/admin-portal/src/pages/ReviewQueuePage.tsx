@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocation, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { ApiError } from '../api/client';
 import type { Page } from '../api/invitations';
 import { listReviewQueue, type ReviewQueueItem } from '../api/reviews';
@@ -26,6 +26,9 @@ function parsePage(value: string | null): number {
 export function ReviewQueuePage() {
   const [params, setParams] = useSearchParams();
   const location = useLocation();
+  const navigate = useNavigate();
+  // A decision on the review page sends the administrator back here with a message to show once.
+  const [flash] = useState(() => (location.state as { flash?: string } | null)?.flash ?? '');
   const categories = useCategories();
   const authorId = params.get('authorId') ?? '';
   const categoryId = params.get('categoryId') ?? '';
@@ -55,6 +58,17 @@ export function ReviewQueuePage() {
       { replace },
     );
   }
+
+  useEffect(() => {
+    if (flash) {
+      navigate(
+        { pathname: location.pathname, search: location.search },
+        { replace: true, state: null },
+      );
+    }
+    // The message is read once; the entry is replaced so a reload does not show it again.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const requestKey = `${authorId}|${categoryId}|${direction}|${page}|${reload}`;
   useEffect(() => {
@@ -215,6 +229,9 @@ export function ReviewQueuePage() {
     <section aria-labelledby="reviews-heading">
       <div className={styles.titleRow}>
         <h1 id="reviews-heading">Review queue</h1>
+      </div>
+      <div role="status" data-testid="review-flash">
+        {flash && <p className={styles.flash}>{flash}</p>}
       </div>
 
       <form

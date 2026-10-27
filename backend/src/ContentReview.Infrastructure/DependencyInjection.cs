@@ -3,6 +3,7 @@ using ContentReview.Domain.Security;
 using ContentReview.Infrastructure.Auditing;
 using ContentReview.Infrastructure.Invitations;
 using ContentReview.Infrastructure.Registration;
+using ContentReview.Infrastructure.Users;
 using ContentReview.Infrastructure.Persistence;
 using ContentReview.Infrastructure.Security;
 using ContentReview.Infrastructure.Sessions;
@@ -46,6 +47,7 @@ public static class DependencyInjection
         services.AddScoped<IInvitationService, InvitationService>();
         services.AddScoped<IInvitationRedemptionService, InvitationRedemptionService>();
         services.AddScoped<IRegistrationService, RegistrationService>();
+        services.AddScoped<IUserDirectoryService, UserDirectoryService>();
 
         return services;
     }

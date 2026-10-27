@@ -303,3 +303,51 @@ Tests: `backend/tests/ContentReview.IntegrationTests/Me/AuthorProfileTests.cs`.
 
 Tests: `backend/tests/ContentReview.IntegrationTests/Categories/CategoriesTests.cs`, `useCategories.test.tsx` in each portal.
 
+
+## Articles (author)
+
+An author creates, reads, edits and deletes their **own** articles while they are drafts. Every route needs an Author token (no token: 401, Administrator token: 403, a suspended author's token: 401). The owner is always the session's user; `authorId`, `status`, `id`, `createdAt` and any other property in a body are ignored. Submitting, withdrawing, listing and the review decisions arrive with F09.2, F09.3, F11 and F10.
+
+| Method | Route | Success |
+|---|---|---|
+| POST | `/api/articles` | 201 `ArticleDto`, `Location: /api/articles/{id}` |
+| GET | `/api/articles/{id}` | 200 `ArticleDto` |
+| PUT | `/api/articles/{id}` | 200 `ArticleDto` (new `version`) |
+| DELETE | `/api/articles/{id}?version=n` | 204 |
+
+```json
+{ "id": "…", "title": "My draft", "summary": "", "body": "",
+  "category": { "id": "…", "name": "Science" },
+  "status": "Draft", "submissionVersion": 0,
+  "createdAt": "…", "updatedAt": "…", "submittedAt": null, "publishedAt": null,
+  "latestReview": { "decision": "Rejected", "reason": "…", "decidedAt": "…" },
+  "allowedActions": ["edit", "delete", "submit"], "version": 1234 }
+```
+
+`category` and `latestReview` are `null` when absent. `allowedActions` comes from the lifecycle table ([article-lifecycle.md](article-lifecycle.md)): Draft `edit, delete, submit`; PendingReview `withdraw`; Rejected `edit, submit`; Published none.
+
+### Create and update
+
+```json
+{ "title": "My draft", "summary": "…", "body": "…", "categoryId": "…", "version": 1234 }
+```
+
+- Only `title` is required. Draft limits: title 1-150, summary at most 500, body at most 20000 (plain text, trimmed; NUL characters are removed). `categoryId` is optional but must exist. The stricter submit rules apply at submission (F09.2), not here.
+- `version` is required on `PUT` and must be the one last read. `PUT` replaces all four content fields: omit `categoryId` or send null to clear it.
+- Errors are reported all at once: 400 with `errors` keyed `title`, `summary`, `body`, `categoryId`, `version`.
+- Content is stored as typed and returned as JSON data; the portals render it as text.
+
+### Delete
+
+Only a Draft can be deleted, and `version` (query) is required. Any review history the draft still carries from an earlier rejection is deleted with it, in the same transaction.
+
+### Errors and the order they are checked
+
+1. Not found, or owned by somebody else: **404** (identical, so ids cannot be probed).
+2. Status does not allow the action (PendingReview or Published edit; anything but Draft delete): **409** `Article cannot be modified in status PendingReview.`
+3. Invalid fields: **400**.
+4. Stale `version`: **409** `The article was changed by someone else. Reload it and try again.` with an extra `currentVersion` property. Nothing is saved. Two simultaneous requests with one version: exactly one wins, the other gets this 409 (or 404 if the article was deleted).
+
+The service (`IArticleService`) repeats the author checks (an administrator's id: 404, a suspended author: 403), so the rules do not rest on the route policy alone.
+
+Tests: `backend/tests/ContentReview.IntegrationTests/Articles/ArticleDraftTests.cs`.

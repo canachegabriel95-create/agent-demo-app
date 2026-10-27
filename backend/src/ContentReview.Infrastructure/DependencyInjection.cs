@@ -58,6 +58,7 @@ public static class DependencyInjection
         services.AddScoped<ICategoryService, CategoryService>();
         services.AddScoped<IArticleService, ArticleService>();
         services.AddScoped<IMyArticlesService, MyArticlesService>();
+        services.AddScoped<IFeedService, FeedService>();
 
         return services;
     }

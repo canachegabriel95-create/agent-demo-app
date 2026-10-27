@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
 using ContentReview.Api.Auth;
 using ContentReview.Api.Controllers;
+using ContentReview.Api.Errors;
 using ContentReview.Api.Health;
 using ContentReview.Api.Options;
 using ContentReview.Infrastructure;
@@ -28,7 +29,8 @@ builder.Services.AddOptions<DemoOptions>().Bind(builder.Configuration.GetSection
 builder.Services.AddOptions<PortalCorsOptions>().Bind(builder.Configuration.GetSection(PortalCorsOptions.SectionName));
 
 builder.Services.AddControllers()
-    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()))
+    .ConfigureApiBehaviorOptions(o => o.InvalidModelStateResponseFactory = ModelStateErrors.CreateResponse);
 
 builder.Services.AddCors();
 builder.Services.AddOptions<CorsOptions>()
@@ -40,13 +42,18 @@ builder.Services.AddOptions<CorsOptions>()
             .WithExposedHeaders("X-Correlation-Id")));
 
 builder.Services.AddInfrastructure();
-builder.Services.AddProblemDetails();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<ICorrelationIdAccessor, CorrelationIdAccessor>();
+builder.Services.AddProblemDetails(options =>
+    options.CustomizeProblemDetails = context =>
+        context.ProblemDetails.Extensions["correlationId"] = CorrelationId.From(context.HttpContext));
+builder.Services.AddExceptionHandler<KnownExceptionHandler>();
+builder.Services.AddExceptionHandler<UnhandledExceptionHandler>();
 
 builder.Services.AddScoped<CredentialsValidator>();
 builder.Services
     .AddAuthentication(SessionAuthentication.Scheme)
     .AddScheme<AuthenticationSchemeOptions, SessionAuthenticationHandler>(SessionAuthentication.Scheme, null);
-builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 builder.Services.AddAuthorization(authorization =>
 {
@@ -112,6 +119,11 @@ if (migrateOnStartup)
     var db = scope.ServiceProvider.GetRequiredService<ContentReviewDbContext>();
     await db.Database.MigrateAsync();
 }
+
+// First: every later middleware, log line and error response carries the correlation id.
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseExceptionHandler();
+app.UseStatusCodePages();
 
 app.UseCors(PortalCorsOptions.PolicyName);
 app.UseAuthentication();

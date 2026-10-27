@@ -21,4 +21,6 @@ public static class AuditActions
     public const string UserReactivated = "UserReactivated";
     public const string ArticleSubmitted = "ArticleSubmitted";
     public const string ArticleWithdrawn = "ArticleWithdrawn";
+    public const string ArticleApproved = "ArticleApproved";
+    public const string ArticleRejected = "ArticleRejected";
 }

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using ContentReview.Api.Auth;
 using ContentReview.Domain.Common;
 using ContentReview.Infrastructure.Reviews;
 using ContentReview.Infrastructure.Users;
@@ -28,9 +29,35 @@ public sealed class ReviewQueueQuery
     public int PageSize { get; init; } = PagedResult<ReviewQueueItem>.DefaultPageSize;
 }
 
+public sealed record ApproveRequest
+{
+    /// <summary>The <c>version</c> of the article the administrator was looking at.</summary>
+    [Required]
+    public uint? Version { get; init; }
+
+    /// <summary>The <c>submissionVersion</c> that was opened: a newer submission is a different thing to decide on.</summary>
+    [Required]
+    [Range(1, int.MaxValue)]
+    public int? SubmissionVersion { get; init; }
+}
+
+public sealed record RejectRequest
+{
+    [Required]
+    public uint? Version { get; init; }
+
+    [Required]
+    [Range(1, int.MaxValue)]
+    public int? SubmissionVersion { get; init; }
+
+    /// <summary>Why the article is sent back, 10-1000 characters after trimming. The author sees it.</summary>
+    public string? Reason { get; init; }
+}
+
 /// <summary>What administrators review: the queue of pending submissions, one article in detail, and the author filter.</summary>
 [Route("api/admin")]
-public sealed class AdminReviewsController(IReviewQueueService reviews) : AdminControllerBase
+public sealed class AdminReviewsController(
+    IReviewQueueService reviews, IReviewDecisionService decisions, ICurrentUser currentUser) : AdminControllerBase
 {
     /// <summary>Lists the articles waiting for review.</summary>
     /// <remarks>
@@ -81,4 +108,42 @@ public sealed class AdminReviewsController(IReviewQueueService reviews) : AdminC
     public async Task<ActionResult<IReadOnlyList<AuthorLookupItem>>> LookupAuthors(
         [FromQuery, MaxLength(100)] string? search, CancellationToken cancellationToken) =>
         Ok(await reviews.LookupAuthorsAsync(search, cancellationToken));
+
+    /// <summary>Publishes a pending article.</summary>
+    /// <remarks>
+    /// Sets Published and <c>publishedAt</c>, stores the review (reviewer, decision, time, submission version) and writes
+    /// an <c>ArticleApproved</c> audit event in one transaction. Checked in order: 404 unknown article; 409 author
+    /// suspended; 409 not pending, a newer submission, or a stale <c>version</c>; 409 when another request decided or
+    /// the author withdrew first. Every 409 carries <c>currentStatus</c> and <c>currentVersion</c>. A submission can be
+    /// decided once. There is no endpoint that edits an article's content.
+    /// </remarks>
+    [HttpPost("articles/{id:guid}/approve")]
+    [ProducesResponseType<ReviewArticleDetails>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ReviewArticleDetails>> Approve(
+        Guid id, ApproveRequest request, CancellationToken cancellationToken) =>
+        Ok(await decisions.ApproveAsync(
+            id, currentUser.UserId, request.Version!.Value, request.SubmissionVersion!.Value, cancellationToken));
+
+    /// <summary>Sends a pending article back to its author with a reason.</summary>
+    /// <remarks>
+    /// Same checks and conflicts as approve, then the reason (10-1000 characters, 400 otherwise). The article becomes
+    /// Rejected, the reason is stored on the review and shown to the author, and an <c>ArticleRejected</c> audit event is
+    /// written.
+    /// </remarks>
+    [HttpPost("articles/{id:guid}/reject")]
+    [ProducesResponseType<ReviewArticleDetails>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<ActionResult<ReviewArticleDetails>> Reject(
+        Guid id, RejectRequest request, CancellationToken cancellationToken) =>
+        Ok(await decisions.RejectAsync(
+            id, currentUser.UserId, request.Version!.Value, request.SubmissionVersion!.Value, request.Reason, cancellationToken));
 }

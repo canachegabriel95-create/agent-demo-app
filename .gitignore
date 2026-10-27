@@ -36,3 +36,6 @@ playwright/.cache/
 !.vscode/extensions.json
 .DS_Store
 Thumbs.db
+
+# Local run state written by scripts/start.sh (pid files and logs)
+.run/

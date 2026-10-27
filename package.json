@@ -1,0 +1,15 @@
+{
+  "name": "content-review",
+  "private": true,
+  "description": "Local Content Review Platform: convenience scripts for running everything from the repository root.",
+  "scripts": {
+    "install:all": "npm --prefix frontend/admin-portal ci && npm --prefix frontend/author-portal ci",
+    "db:up": "docker compose up -d",
+    "db:stop": "docker compose stop",
+    "dev:all": "dotenv -e .env -- concurrently --kill-others --names api,admin,author --prefix-colors blue,green,magenta \"dotnet run --project backend/src/ContentReview.Api\" \"npm --prefix frontend/admin-portal run dev\" \"npm --prefix frontend/author-portal run dev\""
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6",
+    "dotenv-cli": "^11.0.0"
+  }
+}

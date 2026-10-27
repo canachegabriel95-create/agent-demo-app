@@ -40,7 +40,7 @@ describe('layout shell', () => {
       within(screen.getByRole('navigation', { name: 'Main' }))
         .getAllByRole('link')
         .map((link) => link.textContent),
-    ).toEqual(['Home', 'Authors', 'Invitations']);
+    ).toEqual(['Home', 'Review queue', 'Authors', 'Invitations']);
     expect(screen.getByRole('main')).toBeInTheDocument();
     expect(await screen.findByText(/API is Healthy/)).toBeInTheDocument();
   });

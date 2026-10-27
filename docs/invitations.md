@@ -24,7 +24,7 @@ Administrators see and copy full codes. Audit events and logs never contain more
 ## Lifecycle
 
 1. An administrator creates an invitation for an email (`POST /api/admin/invitations`) and shares the code by hand (email delivery is out of scope). The email must not belong to an existing user.
-2. The Author Portal registration form calls `POST /api/registration/validate-invitation` for early feedback; nothing is consumed.
+2. The person opens the Author Portal registration page (see below), which can be reached with the code already filled in (`/register?code=ABCD-EFGH-JKMN`). `POST /api/registration/validate-invitation` is available for early feedback; nothing is consumed.
 3. Registration (`POST /api/registration`, see [api.md](api.md#post-apiregistration)) creates the account and calls `IInvitationRedemptionService.ConsumeAsync` in the same transaction. One conditional UPDATE makes the invitation Used, so concurrent registrations with one code cannot both succeed; the loser gets the `AlreadyUsed` reason.
 4. An administrator may revoke an Available invitation at any time before that.
 
@@ -45,6 +45,19 @@ Accessibility: dialogs have `role="dialog"`, `aria-modal`, a title label, a focu
 
 Test ids: `invitation-create-open`, `invitation-create-submit`, `invitation-created-code`, `invitation-created-copy`, `invitation-create-done`, `invitation-copy-<id>` (row), `invitation-revoke-<id>`, `invitation-revoke-confirm`, `invitations-notice`, `invitations-refresh`.
 
+## Author Portal: registration page
+
+Public route `/register` in the Author Portal (linked from the sign-in page). A signed-in author who opens it is sent to the home page.
+
+| Part | Behavior |
+|---|---|
+| Fields | Invitation code (prefilled from `?code=`), Full name, Email, Password, Confirm password. Autocomplete hints `off`, `name`, `email`, `new-password`, `new-password`. Test ids `register-invitation-code`, `register-full-name`, `register-email`, `register-password`, `register-confirm-password`, `register-submit`, `register-error-summary`. |
+| Password help | `PasswordRequirements` under the password field: a live checklist that says "Met." or "Not met." for every rule. The field points to it with `aria-describedby`. |
+| Client validation | The rules of the API, with the same sentences (`src/validation/registration.ts`): on blur, again as a wrong field is corrected, and on submit. Nothing is sent while a field is invalid. Space for one message is reserved under every field so a message that appears on blur does not move the submit button away from the click. |
+| API errors | The API stays the source of truth. `errors` are shown at the field with the same name (an invitation problem at the code field or, for a different address, at the email field); a 409 appears at the email field. Anything else (unknown field names, rate limit, server error with its reference id) goes into the alert summary at the top. After every failed attempt the summary (`role="alert"`) receives the focus. |
+| Submitting | One request at a time: the button and fields are disabled and the label reads "Creating account…". |
+| Success | `201` leads to `/login?registered=1`, which shows "Your account has been created. Sign in to continue." No session is created by registering. |
+
 ## Where the code is
 
 | What | Where |
@@ -54,7 +67,8 @@ Test ids: `invitation-create-open`, `invitation-create-submit`, `invitation-crea
 | Validation and consumption | `ContentReview.Infrastructure/Invitations/InvitationRedemptionService.cs`, `ContentReview.Api/Controllers/RegistrationController.cs` |
 | Audit hook (no-op until F13.1) | `ContentReview.Domain/Auditing/IAuditWriter.cs` |
 | Admin Portal | `frontend/admin-portal/src/pages/InvitationsPage.tsx` (+ dialogs), `src/api/invitations.ts` |
+| Author Portal registration | `frontend/author-portal/src/pages/RegisterPage.tsx`, `src/validation/registration.ts`, `src/api/registration.ts` |
 
 ## Tests
 
-`InvitationTests`, `InvitationCodeTests` (unit); `AdminInvitationsTests`, `InvitationRedemptionTests` (integration, real PostgreSQL); `InvitationsPage.test.tsx` (Vitest). The Playwright scenario for this page is added by F16.4.
+`InvitationTests`, `InvitationCodeTests` (unit); `AdminInvitationsTests`, `InvitationRedemptionTests` (integration, real PostgreSQL); `InvitationsPage.test.tsx` and `RegisterPage.test.tsx` (Vitest). The Playwright scenario (administrator creates an invitation, the author registers and signs in) is added by F16.4.

@@ -17,6 +17,17 @@ export interface FormFieldProps {
   hint?: string;
   /** Validation message. When set the field is marked invalid and the message is linked to it. */
   error?: string;
+  /** Called when the field loses focus, e.g. to validate it. */
+  onBlur?: () => void;
+  /** `data-testid` of the input, for tests where role and name are not enough. */
+  testId?: string;
+  /** Ids of other elements that describe the field (e.g. a requirements list), added to `aria-describedby`. */
+  describedBy?: string;
+  /**
+   * Keeps one line free for the validation message. Without it a message that appears when the field loses focus
+   * pushes the controls below it down, and a click on the submit button that caused the blur misses the button.
+   */
+  reserveErrorSpace?: boolean;
 }
 
 export function FormField({
@@ -33,11 +44,15 @@ export function FormField({
   autoComplete,
   hint,
   error,
+  onBlur,
+  testId,
+  describedBy: extraDescribedBy,
+  reserveErrorSpace = false,
 }: FormFieldProps) {
   const id = useId();
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;
-  const describedBy = [hint ? hintId : undefined, error ? errorId : undefined]
+  const describedBy = [hint ? hintId : undefined, error ? errorId : undefined, extraDescribedBy]
     .filter(Boolean)
     .join(' ');
 
@@ -52,6 +67,8 @@ export function FormField({
     autoComplete,
     'aria-invalid': error ? true : undefined,
     'aria-describedby': describedBy || undefined,
+    'data-testid': testId,
+    onBlur,
   } as const;
 
   return (
@@ -75,10 +92,12 @@ export function FormField({
           {hint}
         </p>
       )}
-      {error && (
+      {error ? (
         <p id={errorId} className={styles.error}>
           {error}
         </p>
+      ) : (
+        reserveErrorSpace && <p className={styles.error} aria-hidden="true" />
       )}
     </div>
   );

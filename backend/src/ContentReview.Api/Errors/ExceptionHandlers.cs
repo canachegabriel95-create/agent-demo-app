@@ -34,6 +34,7 @@ public sealed class KnownExceptionHandler(IProblemDetailsService problems, ILogg
                 Title = "You do not have permission to perform this action.",
             },
             InvitationNotRedeemableException notRedeemable => InvitationNotRedeemable(notRedeemable.Reason),
+            StaleVersionException stale => StaleVersion(stale),
             ConflictException conflict => Conflict(conflict.Message),
             DbUpdateConcurrencyException => Conflict("The resource was changed by someone else. Reload it and try again."),
             DbUpdateException { InnerException: PostgresException { SqlState: UniqueViolation } } =>
@@ -57,6 +58,14 @@ public sealed class KnownExceptionHandler(IProblemDetailsService problems, ILogg
     {
         var details = new ProblemDetails { Status = StatusCodes.Status400BadRequest, Title = reason.Message() };
         details.Extensions["reason"] = reason.ToString();
+        return details;
+    }
+
+    /// <summary>409 that also says which version is current (<c>currentVersion</c>).</summary>
+    private static ProblemDetails StaleVersion(StaleVersionException stale)
+    {
+        var details = Conflict(stale.Message);
+        details.Extensions["currentVersion"] = stale.CurrentVersion;
         return details;
     }
 

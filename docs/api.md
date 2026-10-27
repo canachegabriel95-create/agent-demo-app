@@ -188,6 +188,7 @@ Administrators look up author accounts. Both routes need an Administrator token 
 |---|---|---|
 | GET | `/api/admin/users` | 200 paged `{ items, page, pageSize, totalCount }` |
 | GET | `/api/admin/users/{id}` | 200 author details |
+| PUT | `/api/admin/users/{id}/profile` | 200 updated author details |
 
 ### List
 
@@ -213,3 +214,19 @@ The four counts come from one grouped query; statuses with no articles are `0`. 
 Indexes: the list filters on role and status, which `users (role, status)` already covers (created with the initial schema). A trigram index for the contains-search was not added: the platform is local with small data, and `ILIKE '%…%'` is fast enough there. If the user table ever grows large, add `pg_trgm` GIN indexes on `full_name` and `normalized_email` with a new migration.
 
 Tests: `backend/tests/ContentReview.IntegrationTests/Users/AdminUsersTests.cs`.
+
+### Update profile
+
+`PUT /api/admin/users/{id}/profile` changes an author's display name and biography.
+
+```json
+{ "fullName": "Ann B. Author", "bio": "Writes about testing.", "version": 1234 }
+```
+
+- `fullName` is required (trimmed, 2-100 characters). `bio` is optional (at most 1000 characters); null, empty or whitespace clears it. `version` is required and must be the one last read from the details.
+- Only these fields can change. Email, role, status, password and any other property in the body are ignored. Active and Suspended authors can both be edited and keep their status.
+- Responses: 200 with the updated details (new `version`); 400 with `errors` keyed `fullName`, `bio`, `version`; 401/403; 404 for unknown ids and for administrators (checked before the body); 409 when `version` is stale (the author was changed meanwhile; nothing is saved). Two simultaneous edits with one version: exactly one wins.
+- A request that changes nothing succeeds without a new version or audit event.
+- Audit: `AdminProfileEdited` with `{ targetUserId, changedFields }` (`fullName`, `bio`). The text itself is never written to the audit.
+
+Tests: `backend/tests/ContentReview.IntegrationTests/Users/AdminEditProfileTests.cs`, `UserTests` (unit).

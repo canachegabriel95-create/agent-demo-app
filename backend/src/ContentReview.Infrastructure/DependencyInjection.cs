@@ -48,6 +48,7 @@ public static class DependencyInjection
         services.AddScoped<IInvitationRedemptionService, InvitationRedemptionService>();
         services.AddScoped<IRegistrationService, RegistrationService>();
         services.AddScoped<IUserDirectoryService, UserDirectoryService>();
+        services.AddScoped<IUserManagementService, UserManagementService>();
 
         return services;
     }

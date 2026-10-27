@@ -55,4 +55,34 @@ public class User
             UpdatedAt = timestamp,
         };
     }
+
+    /// <summary>
+    /// Changes the display name and the biography (an empty biography clears it). Returns the names of the fields that
+    /// actually changed, in the order <c>fullName</c>, <c>bio</c>; when nothing changed the user is left untouched.
+    /// </summary>
+    public IReadOnlyList<string> UpdateProfile(string fullName, string? bio, DateTimeOffset now)
+    {
+        var newName = Guard.Text(fullName, nameof(fullName), FullNameMinLength, FullNameMaxLength);
+        var newBio = Guard.OptionalText(bio, nameof(bio), BioMaxLength);
+
+        var changed = new List<string>();
+        if (!string.Equals(FullName, newName, StringComparison.Ordinal))
+        {
+            changed.Add("fullName");
+        }
+
+        if (!string.Equals(Bio, newBio, StringComparison.Ordinal))
+        {
+            changed.Add("bio");
+        }
+
+        if (changed.Count > 0)
+        {
+            FullName = newName;
+            Bio = newBio;
+            UpdatedAt = Guard.Utc(now);
+        }
+
+        return changed;
+    }
 }

@@ -260,3 +260,34 @@ Tests: `backend/tests/ContentReview.IntegrationTests/Users/AdminEditProfileTests
 Session validation already refuses suspended users. Services that change an author's content (articles, F08/F09) must additionally call `User.EnsureAuthorActive()`, which throws `ForbiddenException` (403) for a suspended account, so they do not depend on the session check alone.
 
 Tests: `backend/tests/ContentReview.IntegrationTests/Users/AdminSuspensionTests.cs`, `UserTests` (unit).
+
+## My profile (author)
+
+An author reads and changes their **own** profile. Both routes need an Author token (no token: 401, Administrator token: 403, a suspended author's token: 401). The author is always the one the session belongs to: there is no id in the route, the query or the body, and no author endpoint returns another author's private profile (the public display name appears only in the feed, F12).
+
+| Method | Route | Success |
+|---|---|---|
+| GET | `/api/me/profile` | 200 profile |
+| PUT | `/api/me/profile` | 200 updated profile |
+
+```json
+{ "id": "…", "fullName": "Ann Author", "email": "ann@demo.local", "bio": "…", "role": "Author",
+  "registeredAt": "…", "version": 1234 }
+```
+
+`bio` is `null` when empty. No password, status or suspension data is returned.
+
+### Update
+
+```json
+{ "fullName": "Ann B. Author", "bio": "Writes about testing.", "version": 1234 }
+```
+
+- `fullName` is required (trimmed, 2-100 characters). `bio` is optional (at most 1000 characters); null, empty or whitespace clears it. `version` is required and must be the one last read.
+- Only these two fields change. `email`, `role`, `status`, `password`, `id` and any other property in the body are ignored.
+- Responses: 200 with the updated profile (new `version`); 400 with `errors` keyed `fullName`, `bio`, `version`; 401/403; 409 when `version` is stale (an administrator may have edited the profile meanwhile; nothing is saved). Two simultaneous updates with one version: exactly one wins.
+- Text is stored as typed and returned as JSON data; the portals render it as text.
+- The service (`IAuthorProfileService`) also refuses an administrator's id with 404, so the rule does not rest on the route policy alone.
+
+Tests: `backend/tests/ContentReview.IntegrationTests/Me/AuthorProfileTests.cs`.
+

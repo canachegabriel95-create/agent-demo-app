@@ -120,7 +120,7 @@ public sealed class UserManagementService(
         return text;
     }
 
-    private static void ValidateProfile(string? fullName, string? bio)
+    internal static void ValidateProfile(string? fullName, string? bio)
     {
         var errors = new Dictionary<string, string[]>();
 

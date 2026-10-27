@@ -34,6 +34,6 @@ Refused means: in Development an exception (so the mistake shows while developin
 
 ## Append-only
 
-`AuditImmutabilityInterceptor` makes `SaveChanges` throw `AuditImmutableException` when an `AuditEvent` is modified or deleted. There is no endpoint that writes audit events (reading them is F13.2). Raw SQL and `ExecuteUpdate`/`ExecuteDelete` do not pass through `SaveChanges`; the application has none for audit events, and no database trigger is added so that the local reset command (F15) can empty the table.
+`AuditImmutabilityInterceptor` makes `SaveChanges` throw `AuditImmutableException` when an `AuditEvent` is modified or deleted. There is no endpoint that writes audit events (they are read through `GET /api/admin/audit-events`, see [api.md](api.md#dashboard-and-audit-history-administrator)). Raw SQL and `ExecuteUpdate`/`ExecuteDelete` do not pass through `SaveChanges`; the application has none for audit events, and no database trigger is added so that the local reset command (F15) can empty the table.
 
 Tests: `ContentReview.IntegrationTests/Auditing/AuditEventTests.cs` (the real writer: one event per action, rollback, no secrets, immutability) and `ContentReview.UnitTests/AuditDetailsSanitizerTests.cs`.

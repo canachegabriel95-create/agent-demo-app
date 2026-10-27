@@ -1,3 +1,4 @@
+using ContentReview.Infrastructure.Admin;
 using ContentReview.Domain.Auditing;
 using ContentReview.Domain.Security;
 using ContentReview.Infrastructure.Auditing;
@@ -61,6 +62,8 @@ public static class DependencyInjection
         services.AddScoped<IArticleService, ArticleService>();
         services.AddScoped<IMyArticlesService, MyArticlesService>();
         services.AddScoped<IFeedService, FeedService>();
+        services.AddScoped<IAdminDashboardService, AdminDashboardService>();
+        services.AddScoped<IAuditHistoryService, AuditHistoryService>();
 
         return services;
     }

@@ -70,3 +70,7 @@ Maps stories to the automated tests that cover them.
 | F17.13 | `automation/fe_automatio/tests/author/registration.spec.ts` | name, email and password rules are enforced with messages (AC3) |
 | F17.13 | `automation/fe_automatio/tests/author/registration.spec.ts` | the same email in a different case is rejected as a duplicate (AC4) |
 | F17.13 | `automation/fe_automatio/tests/author/registration.spec.ts` | two registrations with one code at the same time: exactly one succeeds (AC5) |
+| F17.14 | `automation/fe_automatio/tests/author/layout.spec.ts` | every navigation link opens its page (AC1) |
+| F17.14 | `automation/fe_automatio/tests/author/layout.spec.ts` | logging out clears the session, returns to /login and revokes the token (AC2) |
+| F17.14 | `automation/fe_automatio/tests/author/layout.spec.ts` | a 401 from an API call clears the session and redirects to /login (AC3) |
+| F17.14 | `automation/fe_automatio/tests/author/layout.spec.ts` | admin pages are not part of the author portal / admin data is refused to an author / an unknown route shows the not-found view (AC4) |

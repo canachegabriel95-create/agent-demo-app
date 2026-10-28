@@ -40,3 +40,19 @@ export async function submitArticle(api: APIRequestContext, article: Article): P
 export async function submittedArticle(api: APIRequestContext): Promise<Article> {
   return submitArticle(api, await createDraft(api, await submittableContent(api)));
 }
+
+export async function approveArticle(adminApi: APIRequestContext, article: Article): Promise<Article> {
+  const response = await adminApi.post(`/api/admin/articles/${article.id}/approve`, {
+    data: { version: article.version, submissionVersion: article.submissionVersion },
+  });
+  expect(response.status(), 'approve article').toBe(200);
+  return response.json();
+}
+
+export async function rejectArticle(adminApi: APIRequestContext, article: Article, reason = 'Rejected by an automated test.'): Promise<Article> {
+  const response = await adminApi.post(`/api/admin/articles/${article.id}/reject`, {
+    data: { version: article.version, submissionVersion: article.submissionVersion, reason },
+  });
+  expect(response.status(), 'reject article').toBe(200);
+  return response.json();
+}

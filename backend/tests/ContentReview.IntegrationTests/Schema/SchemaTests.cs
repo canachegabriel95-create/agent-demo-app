@@ -16,8 +16,8 @@ public partial class SchemaTests(PostgresFixture postgres) : IAsyncLifetime
 
     private static readonly string[] ExpectedTables =
     [
-        "article_submissions", "articles", "audit_events", "categories",
-        "invitations", "reviews", "user_sessions", "users",
+        "article_published_versions", "article_revisions", "article_submissions", "articles", "audit_events", "categories",
+        "invitations", "reviews", "revision_reviews", "user_sessions", "users",
     ];
 
     [Fact]
@@ -70,9 +70,12 @@ public partial class SchemaTests(PostgresFixture postgres) : IAsyncLifetime
             ["user_sessions"] = ["id", "user_id", "token_hash", "created_at", "expires_at", "revoked_at", "last_seen_at"],
             ["invitations"] = ["id", "code", "email", "normalized_email", "created_by_user_id", "created_at", "expires_at", "revoked_at", "revoked_by_user_id", "used_at", "used_by_user_id"],
             ["categories"] = ["id", "name", "slug", "sort_order"],
-            ["articles"] = ["id", "author_id", "category_id", "title", "summary", "body", "status", "submission_version", "submitted_at", "published_at", "created_at", "updated_at"],
+            ["articles"] = ["id", "author_id", "category_id", "title", "summary", "body", "status", "submission_version", "submitted_at", "published_at", "published_version", "current_version_published_at", "created_at", "updated_at"],
             ["article_submissions"] = ["id", "article_id", "version", "title", "summary", "body", "category_id", "submitted_at", "withdrawn_at"],
             ["reviews"] = ["id", "article_id", "submission_version", "reviewer_id", "decision", "reason", "decided_at"],
+            ["article_revisions"] = ["id", "article_id", "category_id", "title", "summary", "body", "status", "submission_version", "submitted_at", "created_at", "updated_at"],
+            ["revision_reviews"] = ["id", "revision_id", "submission_version", "reviewer_id", "decision", "reason", "decided_at"],
+            ["article_published_versions"] = ["id", "article_id", "version_number", "title", "summary", "body", "category_id", "published_at", "superseded_at", "superseded_by_revision_id"],
             ["audit_events"] = ["id", "occurred_at", "actor_user_id", "action", "entity_type", "entity_id", "details", "correlation_id"],
         };
 

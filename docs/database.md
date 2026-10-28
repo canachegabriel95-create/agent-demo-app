@@ -22,9 +22,12 @@ PostgreSQL 17, database `content_review`. The schema is owned by EF Core migrati
 | `articles` | Articles and their current state | index `(author_id, status)`; index `(status, submitted_at)`; check on `status`; FKs to `users` and `categories` restrict |
 | `article_submissions` | Snapshot of each submission; `withdrawn_at` is set when the author takes it back (migration `AddSubmissionWithdrawnAt`) | unique `(article_id, version)`; FK to `articles` **cascade** |
 | `reviews` | Review decisions | unique `(article_id, submission_version)` (a submission can be reviewed only once, which makes racing reviews safe); check on `decision`; FKs restrict |
+| `article_revisions` | A proposed new version of a published article (F17.1, migration `AddArticleRevisions`); `xmin` is its `version` | unique `article_id` **where status <> 'Approved'** (at most one open revision per article, which also guarantees two revisions are never published at once); index `(status, submitted_at)`; check on `status`; FKs restrict |
+| `revision_reviews` | Decisions on submissions of a revision | unique `(revision_id, submission_version)` (a submission is decided once); check on `decision`; FK to `article_revisions` **cascade**, to `users` restrict |
+| `article_published_versions` | Versions of an article that were published and then replaced by an approved revision | unique `(article_id, version_number)`; FKs restrict |
 | `audit_events` | Audit trail (`details` is `jsonb`) | index `occurred_at DESC`; index `action`; index `actor_user_id`; FK to `users` restrict |
 
-Delete behavior: every foreign key is `RESTRICT`, except `user_sessions.user_id` and `article_submissions.article_id`, which cascade.
+Delete behavior: every foreign key is `RESTRICT`, except `user_sessions.user_id`, `article_submissions.article_id` and `revision_reviews.revision_id`, which cascade.
 
 EF Core also adds plain indexes on foreign key columns that have no other index (for example `articles.category_id`, `reviews.reviewer_id`).
 

@@ -27,6 +27,7 @@ function item(overrides: Partial<MyArticleItem> = {}): MyArticleItem {
     publishedAt: null,
     latestRejectionReason: null,
     allowedActions: ['edit', 'delete', 'submit'],
+    revision: null,
     version: 10,
     ...overrides,
   };
@@ -427,5 +428,38 @@ describe('row actions', () => {
     expect(await screen.findByTestId('flash-message')).toHaveTextContent('Draft “Old” deleted.');
     // The entry was replaced, so the message is not repeated after a reload.
     await waitFor(() => expect(router.state.location.state).toBeNull());
+  });
+});
+
+describe('revisions of published articles', () => {
+  it('writes the revision status next to the published article and links to the revision', async () => {
+    list = () =>
+      page([
+        item({
+          id: 'p1',
+          title: 'Live article',
+          status: 'Published',
+          allowedActions: [],
+          revision: {
+            id: 'r9',
+            status: 'PendingReview',
+            updatedAt: '2026-10-28T10:00:00Z',
+            submittedAt: '2026-10-28T10:00:00Z',
+          },
+        }),
+        item({ id: 'p2', title: 'No revision', status: 'Published', allowedActions: ['revise'] }),
+      ]);
+    open();
+
+    const rows = await screen.findAllByTestId('article-row');
+    expect(within(rows[0]!).getByTestId('article-row-status')).toHaveTextContent('Published');
+    expect(within(rows[0]!).getByTestId('article-row-revision')).toHaveTextContent(
+      'Revision pending review',
+    );
+    expect(within(rows[0]!).getByTestId('article-row-revision-link')).toHaveAttribute(
+      'href',
+      '/revisions/r9',
+    );
+    expect(within(rows[1]!).queryByTestId('article-row-revision')).not.toBeInTheDocument();
   });
 });

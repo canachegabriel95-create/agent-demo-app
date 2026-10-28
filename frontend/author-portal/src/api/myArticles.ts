@@ -1,5 +1,6 @@
 import { apiFetch } from './client';
 import type { ArticleStatus } from './articles';
+import type { RevisionSummary } from './revisions';
 
 /** How many of the signed-in author's articles are in each status; all four are always present. */
 export interface ArticleStatusCounts {
@@ -26,8 +27,10 @@ export interface MyArticleItem {
   publishedAt: string | null;
   /** Set only while the article is Rejected: the reason of its latest rejection. */
   latestRejectionReason: string | null;
-  /** What the lifecycle allows right now: `edit`, `delete`, `submit`, `withdraw`. */
+  /** What the lifecycle allows right now: `edit`, `delete`, `submit`, `withdraw`, `revise`. */
   allowedActions: string[];
+  /** The revision in progress of a published article; `null` when there is none. */
+  revision: RevisionSummary | null;
   version: number;
 }
 

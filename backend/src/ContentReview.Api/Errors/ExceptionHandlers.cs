@@ -74,7 +74,7 @@ public sealed class KnownExceptionHandler(IProblemDetailsService problems, ILogg
     private static ProblemDetails ReviewConflict(ReviewConflictException review)
     {
         var details = Conflict(review.Message);
-        details.Extensions["currentStatus"] = review.CurrentStatus.ToString();
+        details.Extensions["currentStatus"] = review.CurrentStatus;
         details.Extensions["currentVersion"] = review.CurrentVersion;
         return details;
     }

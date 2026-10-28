@@ -1,4 +1,5 @@
 import { apiFetch } from './client';
+import type { RevisionSummary } from './revisions';
 
 export type ArticleStatus = 'Draft' | 'PendingReview' | 'Published' | 'Rejected';
 
@@ -22,8 +23,12 @@ export interface Article {
   submittedAt: string | null;
   publishedAt: string | null;
   latestReview: ArticleReview | null;
-  /** What the lifecycle allows right now, e.g. `edit`, `delete`, `submit`, `withdraw`. */
+  /** What the lifecycle allows right now, e.g. `edit`, `delete`, `submit`, `withdraw`, `revise`. */
   allowedActions: string[];
+  /** The revision in progress of a published article; `null` when there is none. */
+  openRevision: RevisionSummary | null;
+  /** 0 until published; 1 after the first publication, plus one for each approved revision. */
+  publishedVersion: number;
   /** Concurrency token: send it back when saving. */
   version: number;
 }

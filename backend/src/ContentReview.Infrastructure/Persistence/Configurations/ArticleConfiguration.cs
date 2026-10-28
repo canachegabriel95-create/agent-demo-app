@@ -20,6 +20,7 @@ internal sealed class ArticleConfiguration : IEntityTypeConfiguration<Article>
         builder.Property(a => a.Body).HasMaxLength(Article.BodyMaxLength).IsRequired();
         builder.Property(a => a.Status).AsText();
         builder.Property(a => a.SubmissionVersion).HasDefaultValue(0);
+        builder.Property(a => a.PublishedVersion).HasDefaultValue(0);
 
         builder.Property(a => a.Version).IsRowVersion();
 

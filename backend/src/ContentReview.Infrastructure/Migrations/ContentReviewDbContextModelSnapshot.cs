@@ -46,9 +46,19 @@ namespace ContentReview.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<DateTimeOffset?>("CurrentVersionPublishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("current_version_published_at");
+
                     b.Property<DateTimeOffset?>("PublishedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("published_at");
+
+                    b.Property<int>("PublishedVersion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("published_version");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -102,6 +112,151 @@ namespace ContentReview.Infrastructure.Migrations
                     b.ToTable("articles", null, t =>
                         {
                             t.HasCheckConstraint("ck_articles_status", "status IN ('Draft', 'PendingReview', 'Published', 'Rejected')");
+                        });
+                });
+
+            modelBuilder.Entity("ContentReview.Domain.Entities.ArticlePublishedVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ArticleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("article_id");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(20000)
+                        .HasColumnType("character varying(20000)")
+                        .HasColumnName("body");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("category_id");
+
+                    b.Property<DateTimeOffset>("PublishedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("published_at");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("summary");
+
+                    b.Property<DateTimeOffset>("SupersededAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("superseded_at");
+
+                    b.Property<Guid>("SupersededByRevisionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("superseded_by_revision_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("title");
+
+                    b.Property<int>("VersionNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("version_number");
+
+                    b.HasKey("Id")
+                        .HasName("pk_article_published_versions");
+
+                    b.HasIndex("CategoryId")
+                        .HasDatabaseName("ix_article_published_versions_category_id");
+
+                    b.HasIndex("SupersededByRevisionId")
+                        .HasDatabaseName("ix_article_published_versions_superseded_by_revision_id");
+
+                    b.HasIndex("ArticleId", "VersionNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_article_published_versions_article_id_version_number");
+
+                    b.ToTable("article_published_versions", (string)null);
+                });
+
+            modelBuilder.Entity("ContentReview.Domain.Entities.ArticleRevision", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ArticleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("article_id");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(20000)
+                        .HasColumnType("character varying(20000)")
+                        .HasColumnName("body");
+
+                    b.Property<Guid?>("CategoryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("category_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("status");
+
+                    b.Property<int>("SubmissionVersion")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("submission_version");
+
+                    b.Property<DateTimeOffset?>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("submitted_at");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("summary");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_article_revisions");
+
+                    b.HasIndex("ArticleId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_article_revisions_open_per_article")
+                        .HasFilter("status <> 'Approved'");
+
+                    b.HasIndex("CategoryId")
+                        .HasDatabaseName("ix_article_revisions_category_id");
+
+                    b.HasIndex("Status", "SubmittedAt")
+                        .HasDatabaseName("ix_article_revisions_status_submitted_at");
+
+                    b.ToTable("article_revisions", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_article_revisions_status", "status IN ('Draft', 'PendingReview', 'Rejected', 'Approved')");
                         });
                 });
 
@@ -427,6 +582,54 @@ namespace ContentReview.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ContentReview.Domain.Entities.RevisionReview", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("DecidedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("decided_at");
+
+                    b.Property<string>("Decision")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("decision");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid>("ReviewerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reviewer_id");
+
+                    b.Property<Guid>("RevisionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("revision_id");
+
+                    b.Property<int>("SubmissionVersion")
+                        .HasColumnType("integer")
+                        .HasColumnName("submission_version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_revision_reviews");
+
+                    b.HasIndex("ReviewerId")
+                        .HasDatabaseName("ix_revision_reviews_reviewer_id");
+
+                    b.HasIndex("RevisionId", "SubmissionVersion")
+                        .IsUnique()
+                        .HasDatabaseName("ix_revision_reviews_revision_id_submission_version");
+
+                    b.ToTable("revision_reviews", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_revision_reviews_decision", "decision IN ('Approved', 'Rejected')");
+                        });
+                });
+
             modelBuilder.Entity("ContentReview.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -574,6 +777,46 @@ namespace ContentReview.Infrastructure.Migrations
                         .HasConstraintName("fk_articles_categories_category_id");
                 });
 
+            modelBuilder.Entity("ContentReview.Domain.Entities.ArticlePublishedVersion", b =>
+                {
+                    b.HasOne("ContentReview.Domain.Entities.Article", null)
+                        .WithMany()
+                        .HasForeignKey("ArticleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_article_published_versions_articles_article_id");
+
+                    b.HasOne("ContentReview.Domain.Entities.Category", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_article_published_versions_categories_category_id");
+
+                    b.HasOne("ContentReview.Domain.Entities.ArticleRevision", null)
+                        .WithMany()
+                        .HasForeignKey("SupersededByRevisionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_article_published_versions_article_revisions_superseded_by_");
+                });
+
+            modelBuilder.Entity("ContentReview.Domain.Entities.ArticleRevision", b =>
+                {
+                    b.HasOne("ContentReview.Domain.Entities.Article", null)
+                        .WithMany()
+                        .HasForeignKey("ArticleId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_article_revisions_articles_article_id");
+
+                    b.HasOne("ContentReview.Domain.Entities.Category", null)
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_article_revisions_categories_category_id");
+                });
+
             modelBuilder.Entity("ContentReview.Domain.Entities.ArticleSubmission", b =>
                 {
                     b.HasOne("ContentReview.Domain.Entities.Article", null)
@@ -637,6 +880,23 @@ namespace ContentReview.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_reviews_users_reviewer_id");
+                });
+
+            modelBuilder.Entity("ContentReview.Domain.Entities.RevisionReview", b =>
+                {
+                    b.HasOne("ContentReview.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ReviewerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_revision_reviews_users_reviewer_id");
+
+                    b.HasOne("ContentReview.Domain.Entities.ArticleRevision", null)
+                        .WithMany()
+                        .HasForeignKey("RevisionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_revision_reviews_article_revisions_revision_id");
                 });
 
             modelBuilder.Entity("ContentReview.Domain.Entities.UserSession", b =>

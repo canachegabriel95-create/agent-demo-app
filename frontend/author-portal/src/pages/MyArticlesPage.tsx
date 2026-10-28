@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { deleteArticle, submitArticle, withdrawArticle, type ArticleStatus } from '../api/articles';
 import { ApiError } from '../api/client';
+import { REVISION_STATUS_LABELS } from '../api/revisions';
 import {
   ARTICLE_STATUSES,
   isArticleSort,
@@ -302,6 +303,15 @@ export function MyArticlesPage() {
                   >
                     {STATUS_LABELS[article.status]}
                   </span>
+                  {article.revision && (
+                    <span
+                      className={styles.revisionBadge}
+                      data-status={article.revision.status}
+                      data-testid="article-row-revision"
+                    >
+                      {REVISION_STATUS_LABELS[article.revision.status]}
+                    </span>
+                  )}
                 </div>
                 <p className={styles.meta}>
                   <span data-testid="article-row-category">
@@ -318,6 +328,16 @@ export function MyArticlesPage() {
                       aria-label={`Edit ${article.title}`}
                     >
                       Edit
+                    </Link>
+                  )}
+                  {article.revision && (
+                    <Link
+                      to={`/revisions/${article.revision.id}`}
+                      className={styles.link}
+                      aria-label={`Open the revision of ${article.title}`}
+                      data-testid="article-row-revision-link"
+                    >
+                      Open revision
                     </Link>
                   )}
                   {can('submit') && (

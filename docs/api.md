@@ -412,14 +412,16 @@ Administrators read what is waiting for review and open one submission in detail
 
 ### Queue
 
-Only `PendingReview` articles. Query: `authorId`, `categoryId`, `sort=submittedAt` (the only key), `direction=asc|desc` (default **asc**: oldest submission first), `page` (from 1), `pageSize` (default 20, at most 100). Ties on the submission time are broken by id, so pages never repeat or skip an article. A bad value is a 400.
+`PendingReview` articles (first submissions) **and** `PendingReview` revisions of published articles, in one list. Query: `authorId`, `categoryId`, `sort=submittedAt` (the only key), `direction=asc|desc` (default **asc**: oldest submission first), `page` (from 1), `pageSize` (default 20, at most 100). Ties on the submission time are broken by id, so pages never repeat or skip an article. A bad value is a 400.
 
 ```json
 { "items": [ { "articleId": "…", "title": "…", "category": { "id": "…", "name": "Science" },
     "author": { "id": "…", "fullName": "Ann Author", "status": "Active" },
-    "submittedAt": "…", "submissionVersion": 1 } ],
+    "submittedAt": "…", "submissionVersion": 1, "kind": "Submission", "revisionId": null } ],
   "page": 1, "pageSize": 20, "totalCount": 1 }
 ```
+
+`kind` is `Submission` (opens at `GET /api/admin/articles/{articleId}`) or `Revision` (`articleId` is the published article being revised, `revisionId` is set and the item opens at `GET /api/admin/revisions/{revisionId}`).
 
 Articles of **suspended authors stay in the queue**; `author.status` says `Suspended` so the portal can mark them. Content (summary, body) is not part of a queue item.
 
@@ -501,7 +503,7 @@ The published articles of **all** authors, for any signed-in author to read. Rea
 | GET | `/api/feed/{id}` | 200 `FeedArticle` |
 
 - **Only Published.** The status is part of the query itself, not an option: a draft, pending or rejected article never appears in the list, and its id on the detail route is a plain 404 (the same 404 as an unknown id; nothing says the article exists).
-- **Approved text.** Title, summary, body and category are those of the submission the administrator approved, not whatever the article row holds now.
+- **Latest approved version.** Title, summary, body and category are those of the article's current published version: the one an administrator approved first, or the latest approved revision that replaced it. Revisions that are drafts, pending or rejected never appear (see [revisions.md](revisions.md)).
 - **Suspension does not matter.** An author's published articles stay in the feed when the author is suspended.
 - **No identity.** Authors are only named: `authorDisplayName` (their full name). No author id and no email appear anywhere.
 
@@ -516,6 +518,43 @@ Query of the list: `search` (any part of the title, ignoring case, `%` and `_` l
 The detail has the same fields plus `body`.
 
 Tests: `backend/tests/ContentReview.IntegrationTests/Articles/FeedTests.cs`.
+
+## Revisions of published articles (F17.1)
+
+A published article is edited through a **revision**: a separate version (own title, summary, body, category, status, submission time and submission count) that goes through review while the published version stays visible. Lifecycle, data model and concurrency: [revisions.md](revisions.md).
+
+Author routes (Author token; somebody else's article or revision is a 404; administrators get 403, visitors 401):
+
+| Method | Route | Success |
+|---|---|---|
+| POST | `/api/articles/{articleId}/revisions` | 201 `RevisionDto` (a Draft copy of the published content) |
+| GET | `/api/articles/{articleId}/revisions` | 200 `[RevisionDto]`, newest first |
+| GET | `/api/revisions/{id}` | 200 `RevisionDto` |
+| PUT | `/api/revisions/{id}` | 200 `RevisionDto` (body: `title`, `summary`, `body`, `categoryId`, `version`) |
+| DELETE | `/api/revisions/{id}?version=` | 204 (Draft or Rejected only) |
+| POST | `/api/revisions/{id}/submit` | 200 `RevisionDto` (PendingReview) |
+| POST | `/api/revisions/{id}/withdraw` | 200 `RevisionDto` (Draft again) |
+
+- `RevisionDto`: `id`, `articleId`, `title`, `summary`, `body`, `category`, `status` (`Draft`, `PendingReview`, `Rejected`, `Approved`), `submissionVersion`, `createdAt`, `updatedAt`, `submittedAt`, `latestReview`, `reviews` (decision, `reason`, `decidedAt`; never who decided), `allowedActions` and `version`.
+- Draft limits on save and the submission rules on submit are exactly those of an article (400 with `errors` keyed by camelCase field; nothing changes).
+- Create answers **409** when the article is not Published ("Article cannot be revised in status Draft.") or already has an open revision. Two simultaneous creates: exactly one 201.
+- Every other mutation needs the current `version` (stale: 409 with `currentVersion`) and answers 409 when the status does not allow the action. A PendingReview or Approved revision cannot be edited or discarded.
+- The article's own `GET /api/articles/{id}` and `GET /api/me/articles` carry `openRevision` / `revision` (`id`, `status`, `updatedAt`, `submittedAt`) and offer `revise` in `allowedActions` only while no revision is open. `publishedVersion` on the article counts the published versions (1 after the first publication).
+
+Administrator routes (Administrator token):
+
+| Method | Route | Success |
+|---|---|---|
+| GET | `/api/admin/revisions/{id}` | 200 `ReviewRevisionDetails` (the revision next to the `published` version it would replace) |
+| POST | `/api/admin/revisions/{id}/approve` | 200 `ReviewRevisionDetails` (Approved) |
+| POST | `/api/admin/revisions/{id}/reject` | 200 `ReviewRevisionDetails` (Rejected) |
+
+- A revision that was never submitted is a private draft: 404.
+- Approve and reject take `{ version, submissionVersion }` (reject also `reason`, 10-1000 characters, 400 otherwise) and are checked in the order of articles: 404; 409 author suspended; 409 not pending, a newer submission, or a stale `version`; 409 when another request decided or the author withdrew first. Every 409 carries `currentStatus` (a revision status) and `currentVersion`.
+- **Approve** is one transaction: the revision becomes Approved, its content replaces the article's published content, the replaced version is written to `article_published_versions`, and the review is stored. **Reject** stores the reason and changes nothing on the published article.
+- Of simultaneous approve, reject and withdraw on the same revision exactly one succeeds; the others get 409.
+
+Tests: `backend/tests/ContentReview.IntegrationTests/Revisions/RevisionTests.cs`, `backend/tests/ContentReview.UnitTests/Domain/ArticleRevisionTests.cs`, `RevisionLifecycleTests.cs`.
 
 ## Dashboard and audit history (administrator)
 

@@ -176,16 +176,17 @@ public class FeedTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task The_detail_comes_from_the_approved_snapshot_not_from_the_article_row()
+    public async Task The_detail_is_the_current_published_content_held_by_the_article_row()
     {
+        // A published article is read-only except through an approved revision, which replaces this very content.
         var id = await PublishAsync("As approved", _bobToken, body: new string('a', 150));
-        await _api.ExecuteAsync("UPDATE articles SET title = 'Changed later', body = 'Changed body' WHERE id = @id", ("id", id));
+        await _api.ExecuteAsync("UPDATE articles SET title = 'Replaced by a revision', body = 'New body' WHERE id = @id", ("id", id));
 
         var detail = await ReadAsync(await _api.SendAsync(HttpMethod.Get, $"/api/feed/{id}", _annToken));
 
-        Assert.Equal("As approved", detail.GetProperty("title").GetString());
-        Assert.Equal(new string('a', 150), detail.GetProperty("body").GetString());
-        Assert.Equal(["As approved"], TitlesOf(await FeedAsync()));
+        Assert.Equal("Replaced by a revision", detail.GetProperty("title").GetString());
+        Assert.Equal("New body", detail.GetProperty("body").GetString());
+        Assert.Equal(["Replaced by a revision"], TitlesOf(await FeedAsync()));
     }
 
     [Fact]

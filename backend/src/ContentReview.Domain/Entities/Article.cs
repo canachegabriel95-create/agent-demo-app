@@ -28,7 +28,14 @@ public class Article
     public int SubmissionVersion { get; private set; }
 
     public DateTimeOffset? SubmittedAt { get; private set; }
+    /// <summary>When the article was first published.</summary>
     public DateTimeOffset? PublishedAt { get; private set; }
+
+    /// <summary>1 after the first publication; goes up by one each time an approved revision replaces the content.</summary>
+    public int PublishedVersion { get; private set; }
+
+    /// <summary>When the current published version went live (the first publication or the latest approved revision).</summary>
+    public DateTimeOffset? CurrentVersionPublishedAt { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public DateTimeOffset UpdatedAt { get; private set; }
 
@@ -132,6 +139,8 @@ public class Article
         var timestamp = Guard.Utc(now);
         Status = ArticleLifecycle.Next(Status, ArticleAction.Approve)!.Value;
         PublishedAt = timestamp;
+        PublishedVersion = 1;
+        CurrentVersionPublishedAt = timestamp;
         UpdatedAt = timestamp;
     }
 
@@ -143,6 +152,37 @@ public class Article
 
         Status = ArticleLifecycle.Next(Status, ArticleAction.Reject)!.Value;
         UpdatedAt = Guard.Utc(now);
+    }
+
+    /// <summary>
+    /// Makes the content of an approved revision the published content and returns the version it replaces, to be kept
+    /// in the history. The article stays Published.
+    /// </summary>
+    /// <exception cref="InvalidTransitionException">The article is not Published.</exception>
+    public ArticlePublishedVersion ReplaceContentWith(ArticleRevision revision, DateTimeOffset now)
+    {
+        ArticleLifecycle.EnsureCanPerform(Status, ArticleAction.Revise, ActorKind.Owner);
+        var timestamp = Guard.Utc(now);
+
+        var previous = ArticlePublishedVersion.Create(
+            Id,
+            PublishedVersion,
+            Title,
+            Summary,
+            Body,
+            CategoryId!.Value,
+            CurrentVersionPublishedAt ?? PublishedAt!.Value,
+            timestamp,
+            revision.Id);
+
+        Title = revision.Title;
+        Summary = revision.Summary;
+        Body = revision.Body;
+        CategoryId = revision.CategoryId;
+        PublishedVersion++;
+        CurrentVersionPublishedAt = timestamp;
+        UpdatedAt = timestamp;
+        return previous;
     }
 
     /// <summary>The actions the given actor may take on this article now.</summary>

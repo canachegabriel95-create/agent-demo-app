@@ -12,6 +12,9 @@ public enum ArticleAction
     Withdraw,
     Approve,
     Reject,
+
+    /// <summary>Starts a revision of a Published article (the article itself stays as it is).</summary>
+    Revise,
 }
 
 /// <summary>Who is acting: the author who owns the article, or an administrator.</summary>
@@ -24,7 +27,7 @@ public enum ActorKind
 /// <summary>
 /// The article lifecycle, defined once. The API, the portals and the tests all ask this class what is allowed, so
 /// there is a single table of transitions (see <c>docs/article-lifecycle.md</c>). A <see cref="ArticleStatus.Published"/>
-/// article allows nothing.
+/// article cannot be edited; its owner can only start a revision, which has its own lifecycle (<see cref="RevisionLifecycle"/>).
 /// </summary>
 public static class ArticleLifecycle
 {
@@ -41,6 +44,7 @@ public static class ArticleLifecycle
         new(ArticleStatus.PendingReview, ArticleAction.Reject, ArticleStatus.Rejected, ActorKind.Administrator),
         new(ArticleStatus.Rejected, ArticleAction.Edit, ArticleStatus.Rejected, ActorKind.Owner),
         new(ArticleStatus.Rejected, ArticleAction.Submit, ArticleStatus.PendingReview, ActorKind.Owner),
+        new(ArticleStatus.Published, ArticleAction.Revise, ArticleStatus.Published, ActorKind.Owner),
     ];
 
     /// <summary>Whether <paramref name="actor"/> may do <paramref name="action"/> to an article in <paramref name="status"/>.</summary>
@@ -88,6 +92,7 @@ public static class ArticleLifecycle
             ArticleAction.Withdraw => "withdrawn",
             ArticleAction.Approve => "approved",
             ArticleAction.Reject => "rejected",
+            ArticleAction.Revise => "revised",
             _ => throw new ArgumentOutOfRangeException(nameof(action), action, "Unknown article action."),
         };
 

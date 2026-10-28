@@ -61,7 +61,7 @@ Currently the repo only contains `README.md`, `.mcp.json` (Azure DevOps MCP) and
 - `InvitationStatus`: Available, Used, Expired, Revoked (Expired is derived: not used, not revoked, `expires_at <= now`).
 - `ArticleStatus`: Draft, PendingReview, Published, Rejected. `ReviewDecision`: Approved, Rejected.
 - Email normalization: `Trim()` + `ToLowerInvariant()`, stored in unique `normalized_email`.
-- Tables (snake_case, `uuid` PKs via `Guid.CreateVersion7()`, `timestamptz` UTC): `users`, `user_sessions`, `invitations`, `categories`, `articles`, `article_submissions`, `reviews`, `audit_events`.
+- Tables (snake_case, `uuid` PKs via `Guid.CreateVersion7()`, `timestamptz` UTC): `users`, `user_sessions`, `invitations`, `categories`, `articles`, `article_submissions`, `reviews`, `article_revisions`, `revision_reviews`, `article_published_versions`, `audit_events`.
 - `users`, `invitations`, `articles` use PostgreSQL `xmin` as concurrency token, exposed to clients as `version` (uint).
 
 ### Article lifecycle
@@ -74,8 +74,9 @@ Currently the repo only contains `README.md`, `.mcp.json` (Azure DevOps MCP) and
 | PendingReview | Reject (with reason) | Rejected | Admin |
 | Rejected | Edit and save | Rejected | Owner |
 | Rejected | Resubmit | PendingReview | Owner |
+| Published | Revise | Published (a revision is created) | Owner |
 
-PendingReview and Published are read-only. Unsupported transitions are rejected by the API. Racing transitions (e.g. withdraw vs. review) → exactly one succeeds, the other gets 409. Each submission records timestamp and submission version; earlier review decisions are preserved across resubmissions. Review actions are blocked for articles of suspended authors.
+PendingReview and Published articles cannot be edited. A Published article is changed through a **revision** (`article_revisions`): a separate version that follows Draft → PendingReview → Approved/Rejected (withdraw, edit while Rejected and resubmit as for articles), with at most one open revision per article. Readers see the published version until a revision is approved; approval replaces the published content atomically and keeps the replaced version in `article_published_versions`. See `docs/revisions.md`. Unsupported transitions are rejected by the API. Racing transitions (e.g. withdraw vs. review) → exactly one succeeds, the other gets 409. Each submission records timestamp and submission version; earlier review decisions are preserved across resubmissions. Review actions are blocked for articles of suspended authors.
 
 ### Validation limits
 

@@ -7,6 +7,7 @@ import {
   DELETE_CONFLICT_MESSAGE,
   PENDING_NOTICE,
   PUBLISHED_NOTICE,
+  REVISE_CONFLICT_MESSAGE,
   STATUS_CONFLICT_MESSAGE,
 } from './ArticlePage';
 
@@ -27,6 +28,8 @@ const DRAFT: Article = {
   publishedAt: null,
   latestReview: null,
   allowedActions: ['edit', 'delete', 'submit'],
+  openRevision: null,
+  publishedVersion: 0,
   version: 100,
 };
 
@@ -167,7 +170,7 @@ describe('actions follow allowedActions', () => {
 
   it.each([
     ['PendingReview', ['withdraw']],
-    ['Published', []],
+    ['Published', ['revise']],
   ] as const)('offers neither Edit nor Delete for a %s article', async (status, actions) => {
     current = { ...DRAFT, status, allowedActions: [...actions] };
     renderAt('/articles/a1');
@@ -323,8 +326,8 @@ describe('lifecycle buttons follow allowedActions', () => {
     expect(screen.queryByTestId('article-submit')).not.toBeInTheDocument();
   });
 
-  it('shows a published article as read-only with no actions', async () => {
-    current = { ...DRAFT, status: 'Published', allowedActions: [] };
+  it('shows a published article as not editable, with only the revise action', async () => {
+    current = { ...DRAFT, status: 'Published', allowedActions: ['revise'], publishedVersion: 1 };
     renderAt('/articles/a1');
 
     expect(await screen.findByTestId('article-readonly-notice')).toHaveTextContent(
@@ -334,6 +337,111 @@ describe('lifecycle buttons follow allowedActions', () => {
       screen.queryByRole('button', { name: /submit|withdraw|delete/i }),
     ).not.toBeInTheDocument();
     expect(screen.queryByTestId('article-edit')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Revise this article' })).toBeVisible();
+  });
+});
+
+describe('revising a published article', () => {
+  const PUBLISHED: Article = {
+    ...DRAFT,
+    status: 'Published',
+    allowedActions: ['revise'],
+    publishedVersion: 1,
+    publishedAt: '2026-10-27T12:00:00Z',
+  };
+  const REVISION = {
+    id: 'r1',
+    articleId: 'a1',
+    title: 'My draft',
+    summary: 'A summary',
+    body: 'Line one\nLine two',
+    category: { id: 'c2', name: 'Science' },
+    status: 'Draft',
+    submissionVersion: 0,
+    createdAt: '2026-10-28T10:00:00Z',
+    updatedAt: '2026-10-28T10:00:00Z',
+    submittedAt: null,
+    latestReview: null,
+    reviews: [],
+    allowedActions: ['edit', 'delete', 'submit'],
+    version: 7,
+  };
+  let createResponse: () => Response;
+
+  beforeEach(() => {
+    current = PUBLISHED;
+    createResponse = () => json(REVISION, 201);
+    fetchMock.mockRestore();
+    fetchMock = stubApi({
+      'GET /api/auth/me': () => json(AUTHOR),
+      'GET /api/articles/a1': () => getResponse(),
+      'GET /api/articles/a1/reviews': () => reviewsResponse(),
+      'POST /api/articles/a1/revisions': () => createResponse(),
+      'GET /api/revisions/r1': () => json(REVISION),
+      'GET /api/categories': () => json([]),
+    });
+  });
+
+  it('starts a revision and opens it', async () => {
+    const router = renderAt('/articles/a1');
+
+    await userEvent.click(await screen.findByTestId('article-revise'));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/revisions/r1'));
+    expect(
+      fetchMock.mock.calls.some(
+        ([url, init]) =>
+          String(url).endsWith('/api/articles/a1/revisions') && init?.method === 'POST',
+      ),
+    ).toBe(true);
+    expect(await screen.findByRole('heading', { level: 1, name: /Revision of/ })).toBeVisible();
+  });
+
+  it('does not offer to revise while a revision is open, and links to it with its status', async () => {
+    current = {
+      ...PUBLISHED,
+      allowedActions: [],
+      openRevision: {
+        id: 'r1',
+        status: 'PendingReview',
+        updatedAt: '2026-10-28T10:00:00Z',
+        submittedAt: '2026-10-28T10:00:00Z',
+      },
+    };
+    renderAt('/articles/a1');
+
+    expect(await screen.findByTestId('article-revision-status')).toHaveTextContent(
+      'Revision pending review',
+    );
+    expect(screen.getByTestId('article-revision-link')).toHaveAttribute('href', '/revisions/r1');
+    expect(screen.queryByTestId('article-revise')).not.toBeInTheDocument();
+  });
+
+  it('does not show a revision panel for an article without one', async () => {
+    renderAt('/articles/a1');
+
+    await screen.findByTestId('article-revise');
+    expect(screen.queryByTestId('article-revision')).not.toBeInTheDocument();
+  });
+
+  it('explains a conflict when a revision is already in progress and stays on the article', async () => {
+    createResponse = () => problem(409, 'Conflict');
+    const router = renderAt('/articles/a1');
+
+    await userEvent.click(await screen.findByTestId('article-revise'));
+
+    expect(await screen.findByTestId('article-notice')).toHaveTextContent(REVISE_CONFLICT_MESSAGE);
+    expect(router.state.location.pathname).toBe('/articles/a1');
+    expect(screen.getByTestId('article-revise')).toBeEnabled();
+  });
+
+  it('shows another failure instead of silently doing nothing', async () => {
+    createResponse = () => problem(500, 'Server error');
+    renderAt('/articles/a1');
+
+    await userEvent.click(await screen.findByTestId('article-revise'));
+
+    expect(await screen.findByTestId('article-notice')).toBeVisible();
   });
 });
 
@@ -404,7 +512,7 @@ describe('submitting and withdrawing', () => {
     await userEvent.click(await screen.findByTestId('article-submit-confirm'));
 
     expect(await screen.findByTestId('article-notice')).toHaveTextContent(STATUS_CONFLICT_MESSAGE);
-    current = { ...DRAFT, status: 'Published', allowedActions: [], version: 120 };
+    current = { ...DRAFT, status: 'Published', allowedActions: ['revise'], version: 120 };
 
     await userEvent.click(screen.getByTestId('article-refresh'));
 
@@ -486,7 +594,12 @@ describe('rejection feedback and review history', () => {
   });
 
   it('lists the decisions of every submission, newest first, without who decided', async () => {
-    current = { ...REJECTED, status: 'Published', allowedActions: [], submissionVersion: 2 };
+    current = {
+      ...REJECTED,
+      status: 'Published',
+      allowedActions: ['revise'],
+      submissionVersion: 2,
+    };
     reviews = [
       {
         submissionVersion: 2,

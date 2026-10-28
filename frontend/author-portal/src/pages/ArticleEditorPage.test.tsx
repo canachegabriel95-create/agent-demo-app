@@ -24,6 +24,8 @@ const DRAFT: Article = {
   publishedAt: null,
   latestReview: null,
   allowedActions: ['edit', 'delete', 'submit'],
+  openRevision: null,
+  publishedVersion: 0,
   version: 100,
 };
 
@@ -263,7 +265,7 @@ describe('editing an existing article', () => {
 
   it.each([
     ['PendingReview', ['withdraw']],
-    ['Published', []],
+    ['Published', ['revise']],
   ] as const)(
     'goes to the article page when a %s article cannot be edited',
     async (status, actions) => {

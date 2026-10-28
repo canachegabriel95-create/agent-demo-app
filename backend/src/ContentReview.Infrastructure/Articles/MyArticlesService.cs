@@ -83,6 +83,15 @@ public sealed class MyArticlesService(ContentReviewDbContext db) : IMyArticlesSe
                     g => g.Key,
                     g => g.OrderByDescending(r => r.SubmissionVersion).ThenByDescending(r => r.DecidedAt).First().Reason);
 
+        // The revision in progress of each published article on this page, shown next to it.
+        var publishedIds = rows.Where(r => r.Status == ArticleStatus.Published).Select(r => r.Id).ToList();
+        var revisions = publishedIds.Count == 0
+            ? new Dictionary<Guid, RevisionSummary>()
+            : await db.ArticleRevisions.AsNoTracking()
+                .Where(r => publishedIds.Contains(r.ArticleId) && r.Status != RevisionStatus.Approved)
+                .ToDictionaryAsync(
+                    r => r.ArticleId, r => new RevisionSummary(r.Id, r.Status, r.UpdatedAt, r.SubmittedAt), cancellationToken);
+
         var items = rows.Select(r => new MyArticleItem(
                 r.Id,
                 r.Title,
@@ -92,7 +101,11 @@ public sealed class MyArticlesService(ContentReviewDbContext db) : IMyArticlesSe
                 r.SubmittedAt,
                 r.PublishedAt,
                 r.Status == ArticleStatus.Rejected && reasons.TryGetValue(r.Id, out var reason) ? reason : null,
-                ArticleLifecycle.AllowedActions(r.Status, ActorKind.Owner).Select(a => a.ToString().ToLowerInvariant()).ToList(),
+                ArticleLifecycle.AllowedActions(r.Status, ActorKind.Owner)
+                    .Where(a => a != ArticleAction.Revise || !revisions.ContainsKey(r.Id))
+                    .Select(a => a.ToString().ToLowerInvariant())
+                    .ToList(),
+                revisions.GetValueOrDefault(r.Id),
                 r.Version))
             .ToList();
 

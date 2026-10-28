@@ -32,7 +32,7 @@ Tests: `frontend/admin-portal/src/pages/ReviewQueuePage.test.tsx`; API `backend/
 
 # Review page (`/reviews/:articleId`)
 
-Opened from the queue (a link on the title). It shows one submitted article, read-only, and lets the administrator decide.
+The queue also lists pending revisions of published articles (a "Type" column); a revision opens on its own page, see [revisions.md](revisions.md). A first submission is opened from the queue (a link on the title). It shows one submitted article, read-only, and lets the administrator decide.
 
 - **Header:** title, status badge, category, submission number and submitted date.
 - **Author:** name (link to the author's page), email and account status; a suspended account is highlighted.

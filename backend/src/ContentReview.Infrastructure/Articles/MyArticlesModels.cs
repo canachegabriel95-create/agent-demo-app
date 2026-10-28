@@ -21,7 +21,8 @@ public sealed record MyArticlesFilter(
 
 /// <summary>One of the author's own articles in their list.</summary>
 /// <param name="LatestRejectionReason">The reason of the latest rejection, only while the article is Rejected; otherwise <c>null</c>.</param>
-/// <param name="AllowedActions">What the author may do now: <c>edit</c>, <c>delete</c>, <c>submit</c>, <c>withdraw</c>.</param>
+/// <param name="AllowedActions">What the author may do now: <c>edit</c>, <c>delete</c>, <c>submit</c>, <c>withdraw</c>, <c>revise</c>.</param>
+/// <param name="Revision">The revision in progress of a published article; <c>null</c> when there is none.</param>
 public sealed record MyArticleItem(
     Guid Id,
     string Title,
@@ -32,6 +33,7 @@ public sealed record MyArticleItem(
     DateTimeOffset? PublishedAt,
     string? LatestRejectionReason,
     IReadOnlyList<string> AllowedActions,
+    RevisionSummary? Revision,
     uint Version);
 
 /// <summary>How many of the author's articles are in each status; a status without articles is 0.</summary>

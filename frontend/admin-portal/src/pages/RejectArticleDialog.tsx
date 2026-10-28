@@ -4,16 +4,21 @@ import {
   REVIEW_REASON_MAX,
   REVIEW_REASON_MIN,
   rejectArticle,
+  rejectRevision,
   type ReviewArticle,
+  type ReviewRevision,
 } from '../api/reviews';
 import { Dialog, FormField } from '../components';
 import { describeError } from './invitationFormat';
 import styles from './ReviewPage.module.css';
 
 export interface RejectArticleDialogProps {
-  article: ReviewArticle;
+  /** The submitted article, or the revision of a published article when `kind` is `revision`. */
+  article: ReviewArticle | ReviewRevision;
+  /** What is being rejected; a revision leaves the published version as it is. */
+  kind?: 'article' | 'revision';
   onClose: () => void;
-  onRejected: (updated: ReviewArticle) => void;
+  onRejected: (updated: ReviewArticle | ReviewRevision) => void;
   /** The article is not as it was when opened (409): the page explains and offers a refresh. */
   onConflict: (error: ApiError) => void;
 }
@@ -21,6 +26,7 @@ export interface RejectArticleDialogProps {
 /** Asks for the reason the author will read, then sends the article back. */
 export function RejectArticleDialog({
   article,
+  kind = 'article',
   onClose,
   onRejected,
   onConflict,
@@ -50,7 +56,8 @@ export function RejectArticleDialog({
 
     setSubmitting(true);
     try {
-      onRejected(await rejectArticle(article.id, article.version, article.submissionVersion, text));
+      const reject = kind === 'revision' ? rejectRevision : rejectArticle;
+      onRejected(await reject(article.id, article.version, article.submissionVersion, text));
     } catch (failure) {
       setSubmitting(false);
       if (failure instanceof ApiError && failure.status === 409) {
@@ -64,11 +71,16 @@ export function RejectArticleDialog({
   }
 
   return (
-    <Dialog title="Reject article" onClose={onClose} busy={submitting}>
+    <Dialog
+      title={kind === 'revision' ? 'Reject revision' : 'Reject article'}
+      onClose={onClose}
+      busy={submitting}
+    >
       <form onSubmit={handleSubmit} noValidate>
         <p>
           “{article.title}” goes back to {article.author.fullName}, who can edit it and submit it
           again. They will read your reason.
+          {kind === 'revision' && ' The published version stays as it is.'}
         </p>
         {formError && (
           <p className={styles.formError} role="alert">
@@ -111,7 +123,7 @@ export function RejectArticleDialog({
             disabled={submitting}
             data-testid="review-reject-confirm"
           >
-            {submitting ? 'Rejecting…' : 'Reject article'}
+            {submitting ? 'Rejecting…' : kind === 'revision' ? 'Reject revision' : 'Reject article'}
           </button>
         </div>
       </form>

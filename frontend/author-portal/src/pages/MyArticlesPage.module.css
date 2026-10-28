@@ -162,3 +162,19 @@
   background: var(--color-danger-bg);
   color: var(--color-danger);
 }
+
+/* The revision in progress, written out next to the status of the published article. */
+.revisionBadge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.1rem 0.55rem;
+  border: 1px dashed currentColor;
+  border-radius: 999px;
+  color: var(--color-primary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.revisionBadge[data-status='Rejected'] {
+  color: var(--color-danger);
+}

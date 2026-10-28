@@ -1,85 +1,22 @@
 # Traceability
 
-Maps stories to the automated tests that cover them.
+Which automated test covers which acceptance criterion. Story F16 completes this page for all features; entries are added with each story.
 
-## F17 — Frontend E2E (Playwright)
+## F17.1 Article revision and reapproval for published articles
 
-| Story | Spec | Test |
-|---|---|---|
-| F17.1 | `automation/fe_automatio/tests/admin/login.smoke.spec.ts` | admin login page renders the sign-in form |
-| F17.1 | `automation/fe_automatio/tests/author/login.smoke.spec.ts` | author login page renders the sign-in form |
-| F17.2 | `automation/fe_automatio/tests/admin/login.spec.ts` | valid admin credentials open the dashboard and store the session token (AC1) |
-| F17.2 | `automation/fe_automatio/tests/admin/login.spec.ts` | wrong password / unknown email / an author account show the generic error (AC2) |
-| F17.2 | `automation/fe_automatio/tests/admin/login.spec.ts` | empty email and password show field validation messages (AC3) |
-| F17.2 | `automation/fe_automatio/tests/admin/login.spec.ts` | a suspended admin cannot sign in (AC4) |
-| F17.2 | `automation/fe_automatio/tests/admin/login.spec.ts` | opening `/`, `/users`, `/invitations` without a session redirects to /login (AC5) |
-| F17.2 | `automation/fe_automatio/tests/admin/login.spec.ts` | submit button is disabled and shows progress while signing in (AC6) |
-| F17.3 | `automation/fe_automatio/tests/admin/layout.spec.ts` | every navigation link opens its page and is marked as current (AC1) |
-| F17.3 | `automation/fe_automatio/tests/admin/layout.spec.ts` | logging out clears the session, returns to /login and revokes the token (AC2) |
-| F17.3 | `automation/fe_automatio/tests/admin/layout.spec.ts` | a 401 from an API call clears the session and redirects to /login (AC3) |
-| F17.3 | `automation/fe_automatio/tests/admin/layout.spec.ts` | suspending the signed-in admin ends the session on the next request (AC4) |
-| F17.3 | `automation/fe_automatio/tests/admin/layout.spec.ts` | an unknown route shows the not-found view (AC5) |
-| F17.4 | `automation/fe_automatio/tests/admin/dashboard.spec.ts` | counters match the data created through the API (AC1) |
-| F17.4 | `automation/fe_automatio/tests/admin/dashboard.spec.ts` | shows a loading state until the numbers arrive / shows an error state when the dashboard cannot be loaded (AC2) |
-| F17.4 | `automation/fe_automatio/tests/admin/dashboard.spec.ts` | the dash-* cards open their list pages (AC3) |
-| F17.5 | `automation/fe_automatio/tests/admin/invitations.spec.ts` | lists invitations with the status Available, Used, Expired and Revoked (AC1) |
-| F17.5 | `automation/fe_automatio/tests/admin/invitations.spec.ts` | filters by status and searches by email / paginates 20 invitations per page (AC2) |
-| F17.5 | `automation/fe_automatio/tests/admin/invitations.spec.ts` | revoking asks for confirmation and then marks the invitation Revoked (AC3) |
-| F17.5 | `automation/fe_automatio/tests/admin/invitations.spec.ts` | only Available invitations can be revoked (AC4) |
-| F17.5 | `automation/fe_automatio/tests/admin/invitations.spec.ts` | revoking an invitation that changed meanwhile shows the conflict message (AC5) |
-| F17.5 | `automation/fe_automatio/tests/admin/invitations.spec.ts` | empty / loading / error states (AC6) |
-| F17.6 | `automation/fe_automatio/tests/admin/create-invitation.spec.ts` | creating with the default 7 days shows the code once and lists the invitation (AC1) |
-| F17.6 | `automation/fe_automatio/tests/admin/create-invitation.spec.ts` | 1 and 30 days accepted, 0 and 31 rejected (AC2) |
-| F17.6 | `automation/fe_automatio/tests/admin/create-invitation.spec.ts` | missing, invalid and over-254-character emails are rejected (AC3) |
-| F17.6 | `automation/fe_automatio/tests/admin/create-invitation.spec.ts` | a second active invitation for the same email is rejected (AC4) — **expected failure: known defect, the API accepts it** |
-| F17.6 | `automation/fe_automatio/tests/admin/create-invitation.spec.ts` | cancel closes the dialog without creating an invitation (AC5) |
-| F17.7 | `automation/fe_automatio/tests/admin/users-list.spec.ts` | lists authors with their name, email and status (AC1) |
-| F17.7 | `automation/fe_automatio/tests/admin/users-list.spec.ts` | searches by name and by email / filters by status (AC1) |
-| F17.7 | `automation/fe_automatio/tests/admin/users-list.spec.ts` | paginates 20 authors per page (AC2) |
-| F17.7 | `automation/fe_automatio/tests/admin/users-list.spec.ts` | clicking an author opens the detail page (AC3) |
-| F17.7 | `automation/fe_automatio/tests/admin/users-list.spec.ts` | empty / loading / error states (AC4) |
-| F17.7 | `automation/fe_automatio/tests/admin/users-list.spec.ts` | passwords and hashes are never sent or shown (AC5) |
-| F17.8 | `automation/fe_automatio/tests/admin/user-detail.spec.ts` | editing the name and biography saves them; email and role are read-only / the name is trimmed (AC1) |
-| F17.8 | `automation/fe_automatio/tests/admin/user-detail.spec.ts` | a 1-character name, a name over 100 characters, a biography over 1000 characters are rejected (AC2) |
-| F17.8 | `automation/fe_automatio/tests/admin/user-detail.spec.ts` | suspending needs a reason of at least 10 characters and then marks the author Suspended (AC3) |
-| F17.8 | `automation/fe_automatio/tests/admin/user-detail.spec.ts` | a suspended author's existing session is rejected on the next request (AC4) |
-| F17.8 | `automation/fe_automatio/tests/admin/user-detail.spec.ts` | reactivating restores the Active status (AC5) |
-| F17.8 | `automation/fe_automatio/tests/admin/user-detail.spec.ts` | saving over a newer version shows the conflict message (AC6) |
-| F17.8 | `automation/fe_automatio/tests/admin/user-detail.spec.ts` | an unknown author id shows the not-found state (AC7) |
-| F17.9 | `automation/fe_automatio/tests/admin/review-queue.spec.ts` | lists only pending articles, with title and author (AC1) |
-| F17.9 | `automation/fe_automatio/tests/admin/review-queue.spec.ts` | sorts by submission date / paginates 20 articles per page / an approved or rejected article leaves the queue after a refresh (AC2) |
-| F17.9 | `automation/fe_automatio/tests/admin/review-queue.spec.ts` | a row opens the review detail page (AC3) |
-| F17.9 | `automation/fe_automatio/tests/admin/review-queue.spec.ts` | empty / loading / error states (AC4) |
-| F17.10 | `automation/fe_automatio/tests/admin/review-detail.spec.ts` | shows the title, summary and body as plain text (AC1) |
-| F17.10 | `automation/fe_automatio/tests/admin/review-detail.spec.ts` | approving publishes the article and removes it from the queue (AC2) |
-| F17.10 | `automation/fe_automatio/tests/admin/review-detail.spec.ts` | rejecting needs a reason of at least 10 characters and stores it (AC3) |
-| F17.10 | `automation/fe_automatio/tests/admin/review-detail.spec.ts` | approving an article the author withdrew meanwhile shows the conflict message (AC4) |
-| F17.10 | `automation/fe_automatio/tests/admin/review-detail.spec.ts` | review actions are blocked for a suspended author's article (AC5) |
-| F17.10 | `automation/fe_automatio/tests/admin/review-detail.spec.ts` | earlier decisions stay in the history after the article is resubmitted (AC6) |
-| F17.11 | `automation/fe_automatio/tests/admin/audit.spec.ts` | shows events for an invitation created, a user suspended and an article approved (AC1) |
-| F17.11 | `automation/fe_automatio/tests/admin/audit.spec.ts` | filters by event type / filters by date / paginates 20 events per page (AC2) |
-| F17.11 | `automation/fe_automatio/tests/admin/audit.spec.ts` | never shows a password, a token or a full invitation code (AC3) |
-| F17.11 | `automation/fe_automatio/tests/admin/audit.spec.ts` | empty / loading / error states (AC4) |
-| F17.12 | `automation/fe_automatio/tests/author/login.spec.ts` | valid author credentials open the dashboard and store the session token (AC1) |
-| F17.12 | `automation/fe_automatio/tests/author/login.spec.ts` | wrong password / unknown email / an administrator account show the generic error (AC2) |
-| F17.12 | `automation/fe_automatio/tests/author/login.spec.ts` | empty email and password show field validation messages (AC3) |
-| F17.12 | `automation/fe_automatio/tests/author/login.spec.ts` | a suspended author cannot sign in (AC4) |
-| F17.12 | `automation/fe_automatio/tests/author/login.spec.ts` | protected routes redirect to /login; the registration link opens the registration page (AC5) |
-| F17.13 | `automation/fe_automatio/tests/author/registration.spec.ts` | a valid registration creates the account, uses the invitation and allows signing in (AC1) |
-| F17.13 | `automation/fe_automatio/tests/author/registration.spec.ts` | an unknown / expired / revoked / used / other-email invitation code is rejected and creates no account (AC2) |
-| F17.13 | `automation/fe_automatio/tests/author/registration.spec.ts` | name, email and password rules are enforced with messages (AC3) |
-| F17.13 | `automation/fe_automatio/tests/author/registration.spec.ts` | the same email in a different case is rejected as a duplicate (AC4) |
-| F17.13 | `automation/fe_automatio/tests/author/registration.spec.ts` | two registrations with one code at the same time: exactly one succeeds (AC5) |
-| F17.14 | `automation/fe_automatio/tests/author/layout.spec.ts` | every navigation link opens its page (AC1) |
-| F17.14 | `automation/fe_automatio/tests/author/layout.spec.ts` | logging out clears the session, returns to /login and revokes the token (AC2) |
-| F17.14 | `automation/fe_automatio/tests/author/layout.spec.ts` | a 401 from an API call clears the session and redirects to /login (AC3) |
-| F17.14 | `automation/fe_automatio/tests/author/layout.spec.ts` | admin pages are not part of the author portal / admin data is refused to an author / an unknown route shows the not-found view (AC4) |
-| F17.15 | `automation/fe_automatio/tests/author/dashboard.spec.ts` | the counts per status match the articles created through the API (AC1) |
-| F17.15 | `automation/fe_automatio/tests/author/dashboard.spec.ts` | another author's articles are not counted (AC2) |
-| F17.15 | `automation/fe_automatio/tests/author/dashboard.spec.ts` | the stat-* cards open the filtered article list (AC3) |
-| F17.15 | `automation/fe_automatio/tests/author/dashboard.spec.ts` | a new author sees zero counts / loading / error states (AC4) |
-| F17.16 | `automation/fe_automatio/tests/author/my-articles.spec.ts` | lists only my articles, each with its status (AC1, AC4) |
-| F17.16 | `automation/fe_automatio/tests/author/my-articles.spec.ts` | filters by status / paginates 20 articles per page (AC2) |
-| F17.16 | `automation/fe_automatio/tests/author/my-articles.spec.ts` | a row opens the article and "New article" opens the editor (AC3) |
-| F17.16 | `automation/fe_automatio/tests/author/my-articles.spec.ts` | another author's article is not found when opened by its address (AC4) |
-| F17.16 | `automation/fe_automatio/tests/author/my-articles.spec.ts` | empty / loading / error states (AC5) |
+| Acceptance criterion | Tests |
+|---|---|
+| The owner can create a revision of a Published article; the published version stays unchanged and visible | `RevisionTests.A_published_article_can_be_revised_and_starts_as_a_draft_copy`, `Creating_a_revision_does_not_touch_the_published_version_or_the_feed`, `Editing_a_revision_changes_it_and_leaves_the_published_article_alone`; e2e `revising keeps the published version until the administrator approves the revision` |
+| A revision is a separate version with its own title, summary, body, category, status, submission time and count; only one open revision per article | `ArticleRevisionTests`, `RevisionTests.Only_one_revision_per_article_can_be_open`, `Simultaneous_requests_to_start_a_revision_create_exactly_one`, `The_database_itself_refuses_a_second_open_revision` |
+| Draft, then PendingReview on submit (same validation as article submit), then Approved or Rejected; withdraw while pending; a rejected revision stays editable and can be resubmitted | `RevisionLifecycleTests`, `ArticleRevisionTests`, `RevisionTests.Submitting_applies_the_submission_rules_and_changes_nothing_when_they_fail`, `Withdrawing_returns_the_revision_to_draft_and_it_can_be_resubmitted`, `A_rejected_revision_can_be_edited_and_resubmitted_and_earlier_decisions_are_kept`, `A_revision_that_is_pending_review_is_read_only`; `RevisionPage.test.tsx` |
+| Approving replaces the published content atomically; the previous version is kept in history | `RevisionTests.Approving_replaces_the_published_content_and_keeps_the_previous_version`, `The_replaced_version_is_kept_in_the_history`, `An_article_can_be_revised_again_after_an_approval_and_every_version_is_kept`; `ArticleRevisionTests.Replacing_the_content_publishes_the_revision_and_keeps_the_previous_version` |
+| Rejecting (reason 10-1000 characters) leaves the published version untouched; the reason is visible to the owner | `RevisionTests.Rejecting_leaves_the_published_version_untouched_and_the_author_sees_the_reason`, `A_rejection_needs_a_reason_of_at_least_ten_characters`, `A_reason_of_more_than_1000_characters_is_refused`; e2e `a rejected revision leaves the published version alone and the author sees why` |
+| Simultaneous approve, reject and withdraw: exactly one success, the others 409; two revisions never published at once | `RevisionTests.Simultaneous_approvals_let_exactly_one_succeed_and_publish_once`, `An_approval_and_a_rejection_at_the_same_moment_let_exactly_one_win`, `A_decision_racing_the_authors_withdrawal_lets_exactly_one_succeed`, `The_unique_review_per_revision_submission_is_the_last_line_of_defence`, `The_database_itself_refuses_a_second_open_revision` |
+| The feed shows the latest approved version only; pending or rejected revisions never appear | `RevisionTests.Draft_pending_and_rejected_revisions_never_appear_in_the_feed`, `The_feed_lists_an_article_once_with_its_latest_approved_version`, `The_feed_filters_by_the_category_of_the_current_version` |
+| Review actions are blocked for revisions of suspended authors; non-owners get 404 | `RevisionTests.Review_actions_are_blocked_for_revisions_of_a_suspended_author`, `Somebody_elses_article_and_revision_look_like_they_do_not_exist`, `Revision_endpoints_need_an_author_session`, `Review_endpoints_for_revisions_are_for_administrators_only` |
+| The admin review queue distinguishes new submissions from revisions and shows the published version next to the revision | `RevisionTests.The_queue_lists_revisions_and_submissions_and_tells_them_apart`, `The_administrator_sees_the_revision_next_to_the_published_version`; `RevisionReviewPage.test.tsx`, `ReviewQueuePage.test.tsx` (revisions in the queue) |
+| The author dashboard shows revision status next to the published article | `RevisionTests.My_articles_shows_the_revision_status_next_to_the_published_article`; `MyArticlesPage.test.tsx` (revisions of published articles), `ArticlePage.test.tsx` (revising a published article) |
+| EF Core migration; Swagger documents the new endpoints, schemas and status codes | `SchemaTests` (tables and columns), `RevisionTests.Articles_published_before_revisions_existed_are_backfilled_as_version_one`, `SwaggerTests` (every operation has a summary; tags) |
+| Unit, integration (including concurrency) and E2E tests; docs updated | the tests above; [revisions.md](revisions.md), [api.md](api.md), [article-lifecycle.md](article-lifecycle.md), [permissions.md](permissions.md), [database.md](database.md) |
+
+Out of scope: audit events for revision actions (F17.2).

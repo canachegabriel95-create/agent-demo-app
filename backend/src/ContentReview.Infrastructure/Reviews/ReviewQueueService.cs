@@ -16,42 +16,83 @@ public sealed class ReviewQueueService(ContentReviewDbContext db) : IReviewQueue
     public async Task<PagedResult<ReviewQueueItem>> ListQueueAsync(
         ReviewQueueFilter filter, CancellationToken cancellationToken = default)
     {
-        var pending = db.Articles.AsNoTracking().Where(a => a.Status == ArticleStatus.PendingReview);
+        // First submissions and revisions wait in one queue, so both are projected to the same shape and combined.
+        var submissions = db.Articles.AsNoTracking().Where(a => a.Status == ArticleStatus.PendingReview);
+        var revisions = db.ArticleRevisions.AsNoTracking().Where(r => r.Status == RevisionStatus.PendingReview);
         if (filter.AuthorId is { } authorId)
         {
-            pending = pending.Where(a => a.AuthorId == authorId);
+            submissions = submissions.Where(a => a.AuthorId == authorId);
+            revisions = revisions.Where(r => db.Articles.Any(a => a.Id == r.ArticleId && a.AuthorId == authorId));
         }
 
         if (filter.CategoryId is { } categoryId)
         {
-            pending = pending.Where(a => a.CategoryId == categoryId);
+            submissions = submissions.Where(a => a.CategoryId == categoryId);
+            revisions = revisions.Where(r => r.CategoryId == categoryId);
         }
 
+        var submissionRows =
+            from a in submissions
+            join u in db.Users.AsNoTracking() on a.AuthorId equals u.Id
+            join c in db.Categories.AsNoTracking() on a.CategoryId equals c.Id
+            select new QueueRow
+            {
+                ItemId = a.Id,
+                ArticleId = a.Id,
+                IsRevision = false,
+                Title = a.Title,
+                CategoryId = c.Id,
+                CategoryName = c.Name,
+                AuthorId = u.Id,
+                AuthorName = u.FullName,
+                AuthorStatus = u.Status,
+                SubmittedAt = a.SubmittedAt!.Value,
+                SubmissionVersion = a.SubmissionVersion,
+            };
+
+        var revisionRows =
+            from r in revisions
+            join a in db.Articles.AsNoTracking() on r.ArticleId equals a.Id
+            join u in db.Users.AsNoTracking() on a.AuthorId equals u.Id
+            join c in db.Categories.AsNoTracking() on r.CategoryId equals c.Id
+            select new QueueRow
+            {
+                ItemId = r.Id,
+                ArticleId = a.Id,
+                IsRevision = true,
+                Title = r.Title,
+                CategoryId = c.Id,
+                CategoryName = c.Name,
+                AuthorId = u.Id,
+                AuthorName = u.FullName,
+                AuthorStatus = u.Status,
+                SubmittedAt = r.SubmittedAt!.Value,
+                SubmissionVersion = r.SubmissionVersion,
+            };
+
+        var pending = submissionRows.Concat(revisionRows);
         var totalCount = await pending.CountAsync(cancellationToken);
 
-        var ordered = filter.Direction == SortDirection.Desc
-            ? pending.OrderByDescending(a => a.SubmittedAt)
-            : pending.OrderBy(a => a.SubmittedAt);
-
         // The id breaks ties, so a page boundary never repeats or skips a row.
-        var rows = await (
-                from a in ordered.ThenBy(a => a.Id).Skip((filter.Page - 1) * filter.PageSize).Take(filter.PageSize)
-                join u in db.Users.AsNoTracking() on a.AuthorId equals u.Id
-                join c in db.Categories.AsNoTracking() on a.CategoryId equals c.Id
-                select new { a, u, c })
+        var ordered = filter.Direction == SortDirection.Desc
+            ? pending.OrderByDescending(r => r.SubmittedAt).ThenBy(r => r.ItemId)
+            : pending.OrderBy(r => r.SubmittedAt).ThenBy(r => r.ItemId);
+
+        var rows = await ordered
+            .Skip((filter.Page - 1) * filter.PageSize)
+            .Take(filter.PageSize)
             .ToListAsync(cancellationToken);
 
-        // Joining after the page was cut keeps the order; restore it explicitly because a join does not promise it.
-        var items = (filter.Direction == SortDirection.Desc
-                ? rows.OrderByDescending(r => r.a.SubmittedAt).ThenBy(r => r.a.Id)
-                : rows.OrderBy(r => r.a.SubmittedAt).ThenBy(r => r.a.Id))
+        var items = rows
             .Select(r => new ReviewQueueItem(
-                r.a.Id,
-                r.a.Title,
-                new ArticleCategory(r.c.Id, r.c.Name),
-                new QueueAuthor(r.u.Id, r.u.FullName, r.u.Status),
-                r.a.SubmittedAt!.Value,
-                r.a.SubmissionVersion))
+                r.ArticleId,
+                r.Title,
+                new ArticleCategory(r.CategoryId, r.CategoryName),
+                new QueueAuthor(r.AuthorId, r.AuthorName, r.AuthorStatus),
+                r.SubmittedAt,
+                r.SubmissionVersion,
+                r.IsRevision ? ReviewItemKind.Revision : ReviewItemKind.Submission,
+                r.IsRevision ? r.ItemId : null))
             .ToList();
 
         return new PagedResult<ReviewQueueItem>(items, filter.Page, filter.PageSize, totalCount);
@@ -129,5 +170,21 @@ public sealed class ReviewQueueService(ContentReviewDbContext db) : IReviewQueue
             .Take(LookupLimit)
             .Select(u => new AuthorLookupItem(u.Id, u.FullName))
             .ToListAsync(cancellationToken);
+    }
+
+    // A class with initialisers (not a record built by its constructor): the queries above order by its members.
+    private sealed class QueueRow
+    {
+        public Guid ItemId { get; init; }
+        public Guid ArticleId { get; init; }
+        public bool IsRevision { get; init; }
+        public string Title { get; init; } = null!;
+        public Guid CategoryId { get; init; }
+        public string CategoryName { get; init; } = null!;
+        public Guid AuthorId { get; init; }
+        public string AuthorName { get; init; } = null!;
+        public UserStatus AuthorStatus { get; init; }
+        public DateTimeOffset SubmittedAt { get; init; }
+        public int SubmissionVersion { get; init; }
     }
 }

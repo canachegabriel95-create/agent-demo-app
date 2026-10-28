@@ -4,6 +4,8 @@ export default defineConfig({
   testDir: './tests',
   globalSetup: './global-setup.ts',
   forbidOnly: true,
+  // The admin dashboard counters are global, so spec files must not run side by side.
+  workers: 1,
   reporter: 'list',
   projects: [
     {

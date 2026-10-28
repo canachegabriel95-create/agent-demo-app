@@ -65,3 +65,8 @@ Maps stories to the automated tests that cover them.
 | F17.12 | `automation/fe_automatio/tests/author/login.spec.ts` | empty email and password show field validation messages (AC3) |
 | F17.12 | `automation/fe_automatio/tests/author/login.spec.ts` | a suspended author cannot sign in (AC4) |
 | F17.12 | `automation/fe_automatio/tests/author/login.spec.ts` | protected routes redirect to /login; the registration link opens the registration page (AC5) |
+| F17.13 | `automation/fe_automatio/tests/author/registration.spec.ts` | a valid registration creates the account, uses the invitation and allows signing in (AC1) |
+| F17.13 | `automation/fe_automatio/tests/author/registration.spec.ts` | an unknown / expired / revoked / used / other-email invitation code is rejected and creates no account (AC2) |
+| F17.13 | `automation/fe_automatio/tests/author/registration.spec.ts` | name, email and password rules are enforced with messages (AC3) |
+| F17.13 | `automation/fe_automatio/tests/author/registration.spec.ts` | the same email in a different case is rejected as a duplicate (AC4) |
+| F17.13 | `automation/fe_automatio/tests/author/registration.spec.ts` | two registrations with one code at the same time: exactly one succeeds (AC5) |

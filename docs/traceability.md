@@ -56,3 +56,7 @@ Maps stories to the automated tests that cover them.
 | F17.10 | `automation/fe_automatio/tests/admin/review-detail.spec.ts` | approving an article the author withdrew meanwhile shows the conflict message (AC4) |
 | F17.10 | `automation/fe_automatio/tests/admin/review-detail.spec.ts` | review actions are blocked for a suspended author's article (AC5) |
 | F17.10 | `automation/fe_automatio/tests/admin/review-detail.spec.ts` | earlier decisions stay in the history after the article is resubmitted (AC6) |
+| F17.11 | `automation/fe_automatio/tests/admin/audit.spec.ts` | shows events for an invitation created, a user suspended and an article approved (AC1) |
+| F17.11 | `automation/fe_automatio/tests/admin/audit.spec.ts` | filters by event type / filters by date / paginates 20 events per page (AC2) |
+| F17.11 | `automation/fe_automatio/tests/admin/audit.spec.ts` | never shows a password, a token or a full invitation code (AC3) |
+| F17.11 | `automation/fe_automatio/tests/admin/audit.spec.ts` | empty / loading / error states (AC4) |

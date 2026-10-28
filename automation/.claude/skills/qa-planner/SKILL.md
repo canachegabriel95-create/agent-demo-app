@@ -97,9 +97,9 @@ The output should be in Markdown format and follow this structure:
 ### Scope
 <!-- Describe the scope of the QA plan: story code and title, parent Feature, and the portal(s) involved: Admin / Author / API only -->
 ### Frontend  Test Scenarios
-FE1. [Admin|Author] <scenario> — <expected result> — <source AC / route / doc>
+FE1. [Admin|Author] <scenario> — <expected result> — <source AC / route / doc> — `automate: yes|no · regression: yes|no · testcase: yes|no`
 ### Backend Test Scenarios
-BE1. [Admin|Author|Anonymous] <METHOD /api/route> <scenario> — <expected status and response / DB effect> — <source AC / endpoint in Swagger>
+BE1. [Admin|Author|Anonymous] <METHOD /api/route> <scenario> — <expected status and response / DB effect> — <source AC / endpoint in Swagger> — `automate: yes|no · regression: yes|no`
 ### Test Data and Cleanup
 | Plan IDs | Required state / roles | Synthetic setup / separate fixtures | Cleanup or reset / required role | Evidence / gaps |
 |---|---|---|---|---|
@@ -107,9 +107,14 @@ BE1. [Admin|Author|Anonymous] <METHOD /api/route> <scenario> — <expected statu
 ### Open Questions / Gaps
 <!-- List any gaps or open questions -->
 ### Handoff
-<!-- What the next agent (qa-explorer) must verify first, and in which order to run the scenarios -->
+<!-- For qa-explorer: which portal(s) need a signed-in tab, the preflight items to verify first (the "unverified" cells of Test Data), and the run order (fixture-sharing scenarios together, state-consuming ones last) -->
 ```
-Each scenario gets a stable id (`FE1`, `FE2`, ... / `BE1`, `BE2`, ...) that never changes once written. Downstream agents match a scenario by its id, never by re-reading the wording. There is no separate "Proposed Test Cases" section; the title and any grouping of scenarios into one case are decided later by `qa-explorer`/`qa-test-case-writer`, matching the project's own conventions.
+Each scenario gets a stable id (`FE1`, `FE2`, ... / `BE1`, `BE2`, ...) that never changes once written. Downstream agents match a scenario by its id, never by re-reading the wording.
+
+The flags on each scenario are read by the downstream agents, so keep their exact spelling:
+- `automate` — worth a Playwright (FE, `../../../fe_automation`) or API (BE, `../../../be_automation`) test: stable, deterministic, observable result.
+- `regression` — belongs in the regression set: a core rule (lifecycle, permissions, validation boundary, 409) that a later change could break.
+- `testcase` (FE only) — worth a permanent manual test case in Azure DevOps; `qa-explorer` proposes one only for `testcase: yes`. There is no separate "Proposed Test Cases" section; the title and any grouping of scenarios into one case are decided later by `qa-explorer`/`qa-test-case-writer`, matching the project's own conventions.
 
 **Backend scenarios are planned with the same care as frontend ones.** Each BE scenario names the caller role, the endpoint, the relevant request fields (e.g. a stale `version`, a boundary length) and the expected status code with the response or database effect (ProblemDetails `errors` key, new status, audit event). Cover what the UI cannot reach: validation boundaries sent directly to the API, ownership (not owner → 404), role checks (401/403), stale `version` → 409, and invalid transitions.
 

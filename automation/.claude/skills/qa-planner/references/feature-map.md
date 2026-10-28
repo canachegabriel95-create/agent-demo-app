@@ -27,10 +27,13 @@ then Read with `offset`/`limit` up to the next `## ` heading.
 | F13 Admin dashboard / audit | Admin | `admin-dashboard.md`, `audit-history.md` | Dashboard and audit history (administrator) | `/api/admin/dashboard`, `/api/admin/audit-events` | `audit.md` |
 | F14 Swagger / errors | — | — | Swagger UI and OpenAPI document; Errors | all | `permissions.md` |
 | F15 Demo data / reset | — | `demo-data.md` (not written yet) | — | — (`ContentReview.Tools`) | — |
-| F16 Docs / traceability | — | `traceability.md`, `qa-guide.md` (not written yet) | — | — | — |
+| F16 Docs / traceability | — | `traceability.md` | — | — | `qa-guide.md` (not written yet) |
+| F17 Revisions | Both | `revisions.md` | Revisions of published articles (F17.1) | `/api/articles/{articleId}/revisions`, `/api/revisions/{id}` (+ `/submit`, `/withdraw`), `/api/admin/revisions/{id}` (+ `/approve`, `/reject`) | `article-lifecycle.md`, `permissions.md` |
 
 Cross-portal effects worth a scenario:
 - F06 suspend → the author's sessions end immediately and review actions on their articles are blocked (F10).
 - F10 approve / reject → the author sees the status and the rejection reason (F09, F11); approved articles appear in the feed (F12).
 - F04 revoke / F05 register → the invitation status changes in the Admin Portal list.
-- Every admin action in F04, F06 and F10 writes an audit event (F13).
+- F17 approve a revision → its content replaces the published article in the feed (F12) and My articles (F11); pending or rejected revisions never reach the feed.
+- F06 suspend → review actions on the author's pending revisions are blocked too (F17).
+- Every admin action in F04, F06 and F10 writes an audit event (F13); revision actions do not yet (F17.2).

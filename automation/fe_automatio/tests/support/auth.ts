@@ -1,9 +1,9 @@
 import type { APIRequestContext, Page } from '@playwright/test';
+import { apiUrl } from './api';
 import type { TestUser } from './db';
 
-const apiUrl = process.env.API_URL ?? 'http://localhost:5080';
-
 export const ADMIN_SESSION_KEY = 'cr.admin.session';
+export const AUTHOR_SESSION_KEY = 'cr.author.session';
 
 /** Signs the user in through the API and returns the session token. */
 export async function apiLogin(request: APIRequestContext, user: TestUser, portal: 'Admin' | 'Author'): Promise<string> {

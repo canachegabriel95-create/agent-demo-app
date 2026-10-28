@@ -5,7 +5,8 @@ const authorUrl = process.env.AUTHOR_URL ?? 'http://localhost:5174';
 
 export default defineConfig({
   testDir: './tests',
-  fullyParallel: true,
+  // One worker: dashboard counters and audit lists are global, so tests must not run side by side.
+  workers: 1,
   forbidOnly: !!process.env.CI,
   globalSetup: './tests/support/global-setup.ts',
   globalTeardown: './tests/support/global-teardown.ts',

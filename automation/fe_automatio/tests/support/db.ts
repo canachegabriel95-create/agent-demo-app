@@ -89,8 +89,18 @@ export async function deleteUsers(ids: string[]): Promise<void> {
   if (ids.length === 0) return;
   await withDb(async (db) => {
     await db.query('BEGIN');
+    // Children first: reviews, articles (submissions cascade), invitations, audit events, then users (sessions cascade).
+    await db.query(
+      'DELETE FROM reviews WHERE reviewer_id = ANY($1) OR article_id IN (SELECT id FROM articles WHERE author_id = ANY($1))',
+      [ids],
+    );
+    await db.query('DELETE FROM articles WHERE author_id = ANY($1)', [ids]);
+    await db.query(
+      'DELETE FROM invitations WHERE created_by_user_id = ANY($1) OR used_by_user_id = ANY($1) OR revoked_by_user_id = ANY($1)',
+      [ids],
+    );
     await db.query('DELETE FROM audit_events WHERE actor_user_id = ANY($1) OR entity_id = ANY($1)', [ids]);
-    await db.query('DELETE FROM users WHERE id = ANY($1)', [ids]); // sessions cascade
+    await db.query('DELETE FROM users WHERE id = ANY($1)', [ids]);
     await db.query('COMMIT');
   });
 }

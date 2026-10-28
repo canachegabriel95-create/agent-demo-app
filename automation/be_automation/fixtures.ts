@@ -6,6 +6,7 @@ export { expect };
 export interface Author {
   email: string;
   password: string;
+  token: string;
   api: APIRequestContext;
 }
 
@@ -49,7 +50,7 @@ export const test = base.extend<{ adminApi: APIRequestContext; newAuthor: () => 
       const token = await login(anonymous, email, password, 'Author');
       const api = await authenticated(baseURL!, token);
       contexts.push(api);
-      return { email, password, api };
+      return { email, password, token, api };
     });
     await Promise.all(contexts.map((c) => c.dispose()));
   },

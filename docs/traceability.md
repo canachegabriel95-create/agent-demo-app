@@ -46,3 +46,7 @@ Maps stories to the automated tests that cover them.
 | F17.8 | `automation/fe_automatio/tests/admin/user-detail.spec.ts` | reactivating restores the Active status (AC5) |
 | F17.8 | `automation/fe_automatio/tests/admin/user-detail.spec.ts` | saving over a newer version shows the conflict message (AC6) |
 | F17.8 | `automation/fe_automatio/tests/admin/user-detail.spec.ts` | an unknown author id shows the not-found state (AC7) |
+| F17.9 | `automation/fe_automatio/tests/admin/review-queue.spec.ts` | lists only pending articles, with title and author (AC1) |
+| F17.9 | `automation/fe_automatio/tests/admin/review-queue.spec.ts` | sorts by submission date / paginates 20 articles per page / an approved or rejected article leaves the queue after a refresh (AC2) |
+| F17.9 | `automation/fe_automatio/tests/admin/review-queue.spec.ts` | a row opens the review detail page (AC3) |
+| F17.9 | `automation/fe_automatio/tests/admin/review-queue.spec.ts` | empty / loading / error states (AC4) |

@@ -67,3 +67,13 @@ export async function createInvitation(adminApi: Api, email: string, validForDay
     await adminApi.post('/api/admin/invitations', { email, validForDays }),
   );
 }
+
+export async function reject(adminApi: Api, article: Article, reason = 'Needs more detail before publishing.') {
+  return ok<Article>(
+    await adminApi.post(`/api/admin/articles/${article.id}/reject`, {
+      version: article.version,
+      submissionVersion: article.submissionVersion,
+      reason,
+    }),
+  );
+}

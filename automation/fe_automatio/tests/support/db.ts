@@ -8,6 +8,7 @@ export interface TestUser {
   id: string;
   email: string;
   password: string;
+  fullName: string;
 }
 
 export interface NewUser {
@@ -72,7 +73,7 @@ export async function createUser({ role, status = 'Active', fullName = 'E2E Test
     ),
   );
 
-  return { id, email, password };
+  return { id, email, password, fullName };
 }
 
 export async function suspendUser(id: string): Promise<void> {

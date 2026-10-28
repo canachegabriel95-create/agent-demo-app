@@ -33,3 +33,9 @@ Maps stories to the automated tests that cover them.
 | F17.6 | `automation/fe_automatio/tests/admin/create-invitation.spec.ts` | missing, invalid and over-254-character emails are rejected (AC3) |
 | F17.6 | `automation/fe_automatio/tests/admin/create-invitation.spec.ts` | a second active invitation for the same email is rejected (AC4) — **expected failure: known defect, the API accepts it** |
 | F17.6 | `automation/fe_automatio/tests/admin/create-invitation.spec.ts` | cancel closes the dialog without creating an invitation (AC5) |
+| F17.7 | `automation/fe_automatio/tests/admin/users-list.spec.ts` | lists authors with their name, email and status (AC1) |
+| F17.7 | `automation/fe_automatio/tests/admin/users-list.spec.ts` | searches by name and by email / filters by status (AC1) |
+| F17.7 | `automation/fe_automatio/tests/admin/users-list.spec.ts` | paginates 20 authors per page (AC2) |
+| F17.7 | `automation/fe_automatio/tests/admin/users-list.spec.ts` | clicking an author opens the detail page (AC3) |
+| F17.7 | `automation/fe_automatio/tests/admin/users-list.spec.ts` | empty / loading / error states (AC4) |
+| F17.7 | `automation/fe_automatio/tests/admin/users-list.spec.ts` | passwords and hashes are never sent or shown (AC5) |

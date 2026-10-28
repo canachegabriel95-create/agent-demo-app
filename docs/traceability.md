@@ -60,3 +60,8 @@ Maps stories to the automated tests that cover them.
 | F17.11 | `automation/fe_automatio/tests/admin/audit.spec.ts` | filters by event type / filters by date / paginates 20 events per page (AC2) |
 | F17.11 | `automation/fe_automatio/tests/admin/audit.spec.ts` | never shows a password, a token or a full invitation code (AC3) |
 | F17.11 | `automation/fe_automatio/tests/admin/audit.spec.ts` | empty / loading / error states (AC4) |
+| F17.12 | `automation/fe_automatio/tests/author/login.spec.ts` | valid author credentials open the dashboard and store the session token (AC1) |
+| F17.12 | `automation/fe_automatio/tests/author/login.spec.ts` | wrong password / unknown email / an administrator account show the generic error (AC2) |
+| F17.12 | `automation/fe_automatio/tests/author/login.spec.ts` | empty email and password show field validation messages (AC3) |
+| F17.12 | `automation/fe_automatio/tests/author/login.spec.ts` | a suspended author cannot sign in (AC4) |
+| F17.12 | `automation/fe_automatio/tests/author/login.spec.ts` | protected routes redirect to /login; the registration link opens the registration page (AC5) |

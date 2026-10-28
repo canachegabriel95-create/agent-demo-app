@@ -199,3 +199,16 @@ Conventions shared by both apps (`src/`):
 - `components/`: `LoadingState`, `EmptyState`, `ErrorState` (shows the correlation id), `Pagination`, `FormField` (label, hint and error linked with `aria-describedby`). Use them for every data view so loading, empty and error states look the same.
 - `app/router.tsx`: layout shell (header, main navigation, main region, skip link), `/login` placeholder and a not-found page.
 - Styling is plain CSS modules. User content is always rendered as text; never use `dangerouslySetInnerHTML`.
+
+## Frontend E2E tests (Playwright)
+
+UI tests for both portals live in `automation/fe_automatio` (Playwright + TypeScript, one Playwright project per portal: `admin` on :5173, `author` on :5174). Prerequisite: `npm --prefix frontend/admin-portal ci` and `npm --prefix frontend/author-portal ci`.
+
+```bash
+cd automation/fe_automatio
+npm ci
+npx playwright install chromium   # first time only
+npm run test:e2e                  # starts the portals if they are not already running
+```
+
+`ADMIN_URL` and `AUTHOR_URL` override the portal URLs. The HTML report is written to `playwright-report/`; traces, screenshots and videos are kept for failed tests only. Lint with `npm run lint` and type-check with `npm run typecheck`.

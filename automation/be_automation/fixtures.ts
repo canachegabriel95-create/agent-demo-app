@@ -37,13 +37,22 @@ export function requiredEnv(name: string): string {
   return value;
 }
 
-export const test = base.extend<{ adminApi: APIRequestContext; newAuthor: () => Promise<Author> }>({
-  adminApi: async ({ request: anonymous, baseURL }, use) => {
-    const token = await login(anonymous, requiredEnv('API_ADMIN_EMAIL'), requiredEnv('API_ADMIN_PASSWORD'), 'Admin');
-    const api = await authenticated(baseURL!, token);
-    await use(api);
-    await api.dispose();
-  },
+const apiBaseUrl = process.env.API_BASE_URL ?? 'http://localhost:5080';
+
+export const test = base.extend<{ newAuthor: () => Promise<Author> }, { adminApi: APIRequestContext }>({
+  // One administrator session per worker: signing in for every test would use up the login rate limit.
+  adminApi: [
+    // eslint-disable-next-line no-empty-pattern
+    async ({}, use) => {
+      const anonymous = await request.newContext({ baseURL: apiBaseUrl });
+      const token = await login(anonymous, requiredEnv('API_ADMIN_EMAIL'), requiredEnv('API_ADMIN_PASSWORD'), 'Admin');
+      await anonymous.dispose();
+      const api = await authenticated(apiBaseUrl, token);
+      await use(api);
+      await api.dispose();
+    },
+    { scope: 'worker' },
+  ],
 
   // Registers a fresh author through the API (invitation -> register -> login).
   newAuthor: async ({ request: anonymous, adminApi, baseURL }, use) => {

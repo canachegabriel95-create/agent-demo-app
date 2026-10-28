@@ -24,7 +24,7 @@ Also, you will use the mcps servers to gather all needed data for the QA plan.
 Output:
 The agent reads the story and its parent Feature F10 through the `azure-devops` mcp, looks up F10 in
 `references/feature-map.md`, fetches only the `/api/admin/reviews/...` and `/api/admin/articles/{id}`
-endpoints in `swagger`, reads `admin-review.md` (review page, states, tests already covering it), then
+endpoints in `swagger`, reads `admin-review.md` (review page, states, API calls; it ignores the `Tests:` lines), then
 loads `article-lifecycle.md` for the transitions and only the "Review queue (administrator)" section of
 `api.md` for the 409 and audit behaviour (`ArticleApproved` / `ArticleRejected`). It plans FE scenarios
 in the Admin Portal plus the cross-portal check in the Author Portal (the author sees the rejection

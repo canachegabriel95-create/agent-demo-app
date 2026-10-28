@@ -12,9 +12,19 @@ Based on the acceptance criteria, the story requirements, the Swagger definition
 ## Inputs
 The user will use the following prompt: Plan Story <STORY_ID> / Task <TASK_ID>
 Based on the user input, the agent will gather all info using the mcps tools and the data sent by the user.
-It will gather all data as: Story/Task details (description, acceptance criteria, parent Feature, linked
-PRs and comments) and Swagger definitions (even if the user doesn't mention the swagger explicitly, the
-agent will still gather it when the story or its linked PRs touch the API).
+It will gather all data as: Story/Task details (description, acceptance criteria, parent Feature and
+comments) and Swagger definitions (even if the user doesn't mention the swagger explicitly, the
+agent will still gather it when the story touches the API).
+
+**Black-box planning: never look at the implementation.** The plan is derived from the requirements, not
+from the code, so it is not biased by how the feature was built. Never open, search or follow:
+- pull requests, commits, branches or builds — not even when they are linked to the work item
+  (skip relations of type `ArtifactLink` / `Pull Request` / `Commit` / `Branch`);
+- source code, tests or scripts in the application repository (`backend/`, `frontend/`, `e2e/`,
+  `db/`, `.github/`, `*.cs`, `*.ts`, `*.tsx`, `*.sql`, ...), and `git` history.
+The only sources are: Azure DevOps work items (story, parent Feature, Epic, `[Fxx.n]` dependencies and their
+comments), the live Swagger contract, the documents listed below, and read-only `SELECT`s for current data
+state. Anything you would need code to answer goes under Open Questions / Gaps.
 
 **The system under test is the Local Content Review Platform.** One ASP.NET Core Web API serves two
 React front ends, all running locally:
@@ -41,7 +51,7 @@ only on the Feature or the Epic.
 |---|---|
 | [CLAUDE.md](../../../../CLAUDE.md) | Binding baseline: domain enums, article lifecycle table, validation limits, API conventions (pagination, ProblemDetails, 409 on stale `version`), auth rules, Feature list. **Already in your context** (loaded from the parent folder) — do not Read it again. |
 | [references/feature-map.md](references/feature-map.md) | **Start here.** Feature (`Fxx`) → page doc, `api.md` section, API routes, cross-cutting docs, cross-portal effects |
-| `docs/<page>.md` (e.g. `admin-review.md`, `article-editor.md`, `invitations.md`, `user-management.md`) | Per-page behaviour: route, columns, filters, states (loading / empty / error), `data-testid`s, the API calls the page makes, and the existing automated tests |
+| `docs/<page>.md` (e.g. `admin-review.md`, `article-editor.md`, `invitations.md`, `user-management.md`) | Per-page behaviour: route, columns, filters, states (loading / empty / error), `data-testid`s and the API calls the page makes. Ignore the `Tests:` lines and never open the files they name |
 | [docs/api.md](../../../../docs/api.md) | Endpoint reference, error format, audit events written per endpoint. **Large (~10k tokens): never read it whole** — grep the `##` heading named in the feature map and Read with `offset`/`limit` up to the next `## ` heading |
 | [docs/article-lifecycle.md](../../../../docs/article-lifecycle.md), [docs/business-rules.md](../../../../docs/business-rules.md), [docs/permissions.md](../../../../docs/permissions.md), [docs/authentication.md](../../../../docs/authentication.md), [docs/audit.md](../../../../docs/audit.md) | Cross-cutting rules: state machine, email/password rules, roles and ownership (not owner → 404), session rules, what the audit log may and may not contain. Read only the ones the feature map lists for the story |
 | [AGENTS.md](../../../../AGENTS.md), [docs/README.md](../../../../docs/README.md) | Repository layout and doc index — read only if the feature map does not cover the story |
@@ -65,9 +75,9 @@ The plan is written to two places with the same content:
 - the archive folder, `../../../archive/<STORY_ID>/QA_PLAN.md`, for the downstream agents.
 
 ## Tools / MCP servers used
-- `azure-devops`: Fetch work item details, parent Feature, linked PRs, comments (organization `demo-app-gabi`, project `DemoApp`). Write access only to the QA plan task: create it, change its state, write its Description, add a comment.
+- `azure-devops`: Fetch work item details, parent Feature, comments (organization `demo-app-gabi`, project `DemoApp`). Never call the `repo_*`, `pipelines_*` or `search_code` tools. Write access only to the QA plan task: create it, change its state, write its Description, add a comment.
 - `swagger`: Get API definitions and endpoints from `http://localhost:5080/swagger/v1/swagger.json` (the API must be running).
-- `Read` / `Grep`: consult `CLAUDE.md`, `AGENTS.md` and `docs/` in the application repository (read-only) — never edit them.
+- `Read` / `Grep`: consult only `CLAUDE.md`, `AGENTS.md` and `docs/` in the application repository (read-only, never edit them), plus this skill's `references/`, the lessons file and the archive. Never Read or Grep any other path of the application repository.
 - `postgres` (optional, read-only `SELECT` only): check the current local state a scenario depends on, e.g. which categories are seeded or whether an Active author and an Administrator exist. Only if the agent has the tool; its absence is not a reason to stop.
 
 ## Workflow
@@ -75,7 +85,7 @@ The plan is written to two places with the same content:
 1. Gather data from the Story or Task (depends on what user specified) using the `azure-devops` mcp, including its parent Feature and any `[Fxx.n]` stories it depends on.
 2. Gather Swagger definitions for the endpoints the story touches using the `swagger` mcp. Use the targeted calls (`search_endpoints`, `get_endpoint`, `get_request_schema`, `get_response_schema`) for those endpoints only; do not list or dump the whole document.
 3. Consult the reference docs: look up the Feature in `references/feature-map.md`, then load the page doc, the named `api.md` section only, and the cross-cutting docs listed for it. Use the page's documented states and the `CLAUDE.md` validation limits (already in context) as scenario seeds, and the cross-portal effects listed in the feature map to find the scenarios that cross portals.
-4. Note which behaviour is already covered by automated tests (the `Tests:` lines in the docs: xUnit unit/integration, Vitest, Playwright `e2e/`), so the plan focuses on what is not yet covered or needs end-to-end confirmation.
+4. Do not scope the plan by existing automated tests: plan from the acceptance criteria as if no tests existed.
 5. Analyze all data gathered, and create test scenarios based on the acceptance criteria and Swagger definitions.
 6. Create the document based on the gathered data, test scenarios, and any identified gaps or open questions. Before writing the Test Data and Cleanup section, read `references/test-data-constraints.md`. For each data-changing scenario (including setup and negative API tests), identify the required state and roles, a supported way to create synthetic fixtures, and a cleanup/reset operation with the required role. Reserve separate fixtures when one scenario consumes a state another needs. Do not create data during planning or claim reset is available without evidence; mark unknown operations or access as gaps for the explorer's preflight.
 7. Write the plan into the QA plan task's Description, close the task and add the summary comment (`references/ado-qa-task.md` §4). If the run stopped early, leave the task in progress with a comment saying why.
@@ -110,6 +120,7 @@ Constraints on setup and cleanup (account creation, what cannot be deleted, rese
 ## Guardrails / Rules
 
 - Do not invent acceptance criteria; flag missing info instead.
+- Never look at pull requests, commits, branches, source code, tests or git history (see Inputs). If a gap could only be closed by reading code, list it as an open question instead.
 - Reference the exact AC for every test scenario.
 - Name the portal each FE scenario belongs to (Admin / Author) — both portals share one API, so a scenario is ambiguous without it.
 - The PBI, its Feature and every other work item are read-only. The only work item you may create or change is the PBI's QA plan task (`references/ado-qa-task.md`).

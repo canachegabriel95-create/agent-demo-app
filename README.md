@@ -199,3 +199,20 @@ Conventions shared by both apps (`src/`):
 - `components/`: `LoadingState`, `EmptyState`, `ErrorState` (shows the correlation id), `Pagination`, `FormField` (label, hint and error linked with `aria-describedby`). Use them for every data view so loading, empty and error states look the same.
 - `app/router.tsx`: layout shell (header, main navigation, main region, skip link), `/login` placeholder and a not-found page.
 - Styling is plain CSS modules. User content is always rendered as text; never use `dangerouslySetInnerHTML`.
+
+## Frontend E2E tests (Playwright)
+
+UI tests for both portals live in `automation/fe_automatio` (Playwright + TypeScript, one Playwright project per portal: `admin` on :5173, `author` on :5174). Prerequisite: `npm --prefix frontend/admin-portal ci` and `npm --prefix frontend/author-portal ci`.
+
+```bash
+cd automation/fe_automatio
+npm ci
+npx playwright install chromium   # first time only
+npm run test:e2e                  # starts the portals if they are not already running
+```
+
+Tests that need the API and database require the stack to be running (see above) and `E2E_DATABASE_URL` (for example `postgres://content_review:<password>@localhost:5432/content_review`). Start the API with `Auth__LoginAttemptsPerMinute=1000`, otherwise the login rate limit (10 per minute per IP) fails parallel tests.
+
+**The suite leaves the database clean.** Tests create their own users with an `e2e-` email prefix (`tests/support/db.ts`) and delete them, with their sessions and audit events, when the test ends. Before the run, leftovers of a crashed run are removed; after the run, it fails if any `e2e-` user remains.
+
+`ADMIN_URL` and `AUTHOR_URL` override the portal URLs. The HTML report is written to `playwright-report/`; traces, screenshots and videos are kept for failed tests only. Lint with `npm run lint` and type-check with `npm run typecheck`.

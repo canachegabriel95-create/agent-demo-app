@@ -465,7 +465,7 @@ export function RevisionPage() {
               value={summary}
               onChange={(value) => edit(() => setSummary(value), 'summary')}
               disabled={locked}
-              hint={`${summary.trim().length} / ${SUMMARY_MAX} characters`}
+              hint={`${body.trim().length} / ${SUMMARY_MAX} characters`}
               error={errors.summary}
               testId="revision-summary"
             />

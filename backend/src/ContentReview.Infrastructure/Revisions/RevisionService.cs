@@ -52,8 +52,8 @@ public sealed class RevisionService(ContentReviewDbContext db, TimeProvider time
 
         var revisions = await db.ArticleRevisions.AsNoTracking()
             .Where(r => r.ArticleId == articleId)
-            .OrderByDescending(r => r.CreatedAt)
-            .ThenByDescending(r => r.Id)
+            .OrderBy(r => r.CreatedAt)
+            .ThenBy(r => r.Id)
             .ToListAsync(cancellationToken);
 
         var result = new List<RevisionDto>(revisions.Count);

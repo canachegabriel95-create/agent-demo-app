@@ -1,5 +1,18 @@
 import pg from 'pg';
 
+async function run(sql: string, params: unknown[]) {
+  const client = new pg.Client({ connectionString: process.env.API_DB_CONNECTION });
+  await client.connect();
+  try {
+    await client.query(sql, params);
+  } finally {
+    await client.end();
+  }
+}
+
+export const expireInvitation = (id: string) =>
+  run(`update invitations set expires_at = now() - interval '1 minute' where id = $1`, [id]);
+
 // Ages every session of a user so the API sees it as expired; there is no endpoint to do this.
 export async function expireSessionsOf(email: string) {
   const client = new pg.Client({ connectionString: process.env.API_DB_CONNECTION });

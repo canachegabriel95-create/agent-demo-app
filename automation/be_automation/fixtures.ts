@@ -20,6 +20,16 @@ async function login(api: APIRequestContext, email: string, password: string, po
   return (await response.json()).token as string;
 }
 
+export function strongPassword() {
+  return `Aa1!${randomUUID()}`;
+}
+
+export async function createInvitation(adminApi: APIRequestContext, email: string) {
+  const response = await adminApi.post('/api/admin/invitations', { data: { email } });
+  expect(response.status(), 'create invitation').toBe(201);
+  return (await response.json()) as { id: string; code: string; version: number };
+}
+
 export function requiredEnv(name: string): string {
   const value = process.env[name];
   if (!value) throw new Error(`Set ${name} (see .env.example).`);
@@ -39,10 +49,8 @@ export const test = base.extend<{ adminApi: APIRequestContext; newAuthor: () => 
     const contexts: APIRequestContext[] = [];
     await use(async () => {
       const email = `author-${randomUUID()}@example.test`;
-      const password = `Aa1!${randomUUID()}`;
-      const invitation = await adminApi.post('/api/admin/invitations', { data: { email } });
-      expect(invitation.status(), 'create invitation').toBe(201);
-      const { code } = await invitation.json();
+      const password = strongPassword();
+      const { code } = await createInvitation(adminApi, email);
       const registration = await anonymous.post('/api/registration', {
         data: { invitationCode: code, fullName: 'Test Author', email, password, confirmPassword: password },
       });

@@ -16,6 +16,8 @@ type Fixtures = {
   trackEmail: (email: string) => void;
   /** A new administrator, signed in: the page starts with the session in place. */
   admin: Session;
+  /** The API as a new administrator; the page is not signed in (use it from author-portal tests). */
+  adminApi: Api;
   /** A new author, signed in: the page starts with the session in place. */
   author: Session;
 };
@@ -40,6 +42,10 @@ export const test = base.extend<Fixtures>({
     const token = await apiLogin(request, user, 'Admin');
     await startSignedIn(page, ADMIN_SESSION_KEY, token);
     await use({ user, token, api: apiAs(request, token) });
+  },
+  adminApi: async ({ request, newUser }, use) => {
+    const user = await newUser({ role: 'Administrator' });
+    await use(apiAs(request, await apiLogin(request, user, 'Admin')));
   },
   author: async ({ page, request, newUser }, use) => {
     const user = await newUser({ role: 'Author' });

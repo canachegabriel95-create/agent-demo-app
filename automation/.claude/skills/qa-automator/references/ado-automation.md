@@ -57,7 +57,7 @@ every other tag kept as it was — and send one update:
 
 - `System.Tags` is replaced as a whole: always send the complete list, never only the new tag.
 - `rev` test fails → re-read and retry once; fails again → report, do not change the tag.
-- A Test Case whose test is `fixme` or failing keeps `Should be automated`.
+- A Test Case whose test is still failing after the 3 fix attempts keeps `Should be automated`.
 
 ## 4. Summary and close
 
@@ -73,7 +73,7 @@ Project: automation/fe_automation · Run: `npm --prefix fe_automation test -- --
 ### Data and cleanup
 Created per test: <records>. Leftover check: <table: 0 rows, …>.
 ### Not automated / needs a human
-- TC <id>: <reason> (application defect, unclear expected result, missing locator, …)
+- TC <id>: <reason> (failing after 3 attempts: <error>; possible application defect: <actual vs expected>; unclear expected result, …)
 ### Files
 - added/changed: <paths>
 ```
@@ -83,7 +83,7 @@ Created per test: <records>. Leftover check: <table: 0 rows, …>.
   `add /fields/System.Description = <summary>`, and `add /fields/System.State = <finished>` **only if
   every selected Test Case was automated and the leftover check was empty**.
 - Markdown rejected → send the Description as simple HTML (drop the format operation).
-- Comment: `QA automation by qa-automator: <n> automated / <n> fixme / <n> not automated, cleanup verified (<n> rows left).`
+- Comment: `QA automation by qa-automator: <n> automated / <n> failing / <n> not automated, cleanup verified (<n> rows left).`
   When the task stays in progress, the comment says what blocks it.
 
 ## If the run cannot finish

@@ -96,11 +96,11 @@ TypeScript, page objects, SQL test data. Its structure and the helpers you must 
 5. **Write**, in this order: queries (`db/queries/*.sql`) → test data (`testData/*.ts`) → page object
    (`pageObjects/<portal>/*.ts`) → spec (`tests/<portal>/<feature>.spec.ts`). One `test()` per Test
    Case, title = the Test Case title, tagged `@PBI-<id>` and `@TC-<id>`.
-6. **Run** `npm --prefix fe_automation test -- --grep @PBI-<id> --repeat-each=3 --reporter=list`. A
-   failure is first assumed to be the test's fault: check the locator, the wait, the data. Fix and
-   re-run. Only when the test is right and the application still does something different from the
-   Test Case's expected result is it an **application defect**: keep the assertion as it is (never
-   weaken it to pass), mark the test `test.fixme(...)` with a one-line reason, and report it.
+6. **Run** `npm --prefix fe_automation test -- --grep @PBI-<id> --repeat-each=3 --reporter=list` and
+   **make sure the tests really ran** (see "Tests must run" below). A failure may be the test's fault
+   (locator, wait, data): you get **at most 3 fix attempts per failing test**, each followed by a
+   re-run. After the third attempt the test stays as it is and **stays failing** — no more changes, no
+   `skip` / `fixme`. Report it with the error and what you tried. See "Do not cover bugs" below.
 7. **Leftover check.** With the `postgres` MCP, count rows carrying the run tag in every table the
    tests touched (`references/test-data-and-cleanup.md` §5). Anything left → fix the cleanup, delete
    the leftovers through a test re-run (never by hand), check again.
@@ -110,8 +110,39 @@ TypeScript, page objects, SQL test data. Its structure and the helpers you must 
    replace the tag `Should be automated` with `Automated` (§3 of the reference). Write the summary into
    the QA Automation task, close it if every selected Test Case was automated, otherwise leave it in
    progress, and add the comment (§4).
-10. **Report** to the human: Test Case → spec file and test title, pass / fixme, tags changed, the
-    leftover check result, application defects found, and files added or changed.
+10. **Report** to the human: Test Case → spec file and test title, pass / fail, tags changed, the
+    leftover check result, failing tests with their error and the 3 attempts, possible application
+    defects, and files added or changed.
+
+## Do not cover bugs
+
+The test exists to show whether the application does what the Test Case expects. When it fails:
+- A fix attempt may change only **how** the test drives the page: a locator, a wait, the data setup,
+  a typo in the test. It may never change **what** the test checks.
+- Never change the expected value, remove or loosen an assertion (`toContainText` instead of
+  `toHaveText`, `toBeVisible` instead of the value, a regex that also matches the wrong result), add a
+  retry, a `try/catch`, a longer timeout to hide slowness, a reload, or extra steps the Test Case does
+  not have, just to make it pass.
+- Never work around the application's behaviour (call the API instead of the UI action under test, set
+  the expected state in the database, skip the step that fails).
+- If the failure shows the application differs from the Test Case's expected result, that is a possible
+  bug: stop fixing (it does not use up the remaining attempts), leave the test failing, and report it
+  with the error and the evidence. Bugs are filed by `qa-explorer` / `qa-bug-reporter`, not here.
+- **3 attempts, then stop.** Count every change made to get one failing test green. After the third,
+  leave the test failing exactly as it is, keep the tag `Should be automated`, and move on.
+
+## Tests must run
+
+A test that never ran proves nothing. After every run, check the list reporter output:
+- Every new test appears by its title with a result (✓ or ✘). The number of tests found for
+  `--grep @PBI-<id>` equals the number of Test Cases automated × the `--repeat-each` count.
+  "No tests found", a lower count, or a skipped (`-`) test means the run is not valid: fix the tag, the
+  file location (`tests/**/*.spec.ts`) or the import, and run again.
+- No `test.only`, `test.skip`, `test.fixme` or `describe.skip` in the files you touched.
+- The test actually executed its steps: it fails if the assertion is changed to a wrong value. Check
+  this once per new test by temporarily changing the expected value, run it, see it fail, and restore
+  it (this does not count as a fix attempt).
+- A passing result counts only from a run where the API and both portals were up (`/health`).
 
 ## Writing the test — what good looks like
 
@@ -166,4 +197,4 @@ PBI and sets it Active. The Authors page already has `pageObjects/admin/AuthorsP
 `tests/admin/authors.spec.ts` tagged `@PBI-50` and `@TC-<id>`. Run 3× green, full suite green, the
 leftover check finds 0 users with the run tag. The three Test Cases now carry `Automated`, the task
 Description lists Test Case → test, the task is Closed, and the comment says
-`3 automated / 0 fixme, cleanup verified (0 rows left)`.
+`3 automated / 0 failing, cleanup verified (0 rows left)`.

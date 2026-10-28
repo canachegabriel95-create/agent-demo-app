@@ -78,3 +78,8 @@ Maps stories to the automated tests that cover them.
 | F17.15 | `automation/fe_automatio/tests/author/dashboard.spec.ts` | another author's articles are not counted (AC2) |
 | F17.15 | `automation/fe_automatio/tests/author/dashboard.spec.ts` | the stat-* cards open the filtered article list (AC3) |
 | F17.15 | `automation/fe_automatio/tests/author/dashboard.spec.ts` | a new author sees zero counts / loading / error states (AC4) |
+| F17.16 | `automation/fe_automatio/tests/author/my-articles.spec.ts` | lists only my articles, each with its status (AC1, AC4) |
+| F17.16 | `automation/fe_automatio/tests/author/my-articles.spec.ts` | filters by status / paginates 20 articles per page (AC2) |
+| F17.16 | `automation/fe_automatio/tests/author/my-articles.spec.ts` | a row opens the article and "New article" opens the editor (AC3) |
+| F17.16 | `automation/fe_automatio/tests/author/my-articles.spec.ts` | another author's article is not found when opened by its address (AC4) |
+| F17.16 | `automation/fe_automatio/tests/author/my-articles.spec.ts` | empty / loading / error states (AC5) |

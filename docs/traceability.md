@@ -83,3 +83,10 @@ Maps stories to the automated tests that cover them.
 | F17.16 | `automation/fe_automatio/tests/author/my-articles.spec.ts` | a row opens the article and "New article" opens the editor (AC3) |
 | F17.16 | `automation/fe_automatio/tests/author/my-articles.spec.ts` | another author's article is not found when opened by its address (AC4) |
 | F17.16 | `automation/fe_automatio/tests/author/my-articles.spec.ts` | empty / loading / error states (AC5) |
+| F17.17 | `automation/fe_automatio/tests/author/article-editor.spec.ts` | a draft with only a title can be saved (AC1) |
+| F17.17 | `automation/fe_automatio/tests/author/article-editor.spec.ts` | the title, summary and body limits are enforced (AC1) |
+| F17.17 | `automation/fe_automatio/tests/author/article-editor.spec.ts` | a draft and a rejected article can be edited and saved (AC2) |
+| F17.17 | `automation/fe_automatio/tests/author/article-editor.spec.ts` | a pending and a published article are read-only (AC2) |
+| F17.17 | `automation/fe_automatio/tests/author/article-editor.spec.ts` | a change made elsewhere shows a conflict and is not overwritten (AC3) |
+| F17.17 | `automation/fe_automatio/tests/author/article-editor.spec.ts` | markup in an article is shown as text and never run (AC4) |
+| F17.17 | `automation/fe_automatio/tests/author/article-editor.spec.ts` | the categories come from the seeded list (AC5) |

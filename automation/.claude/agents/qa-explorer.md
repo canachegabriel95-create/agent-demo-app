@@ -1,6 +1,6 @@
 ---
 name: qa-explorer
-description: Executes the scenarios of a qa-planner QA plan and a PBI's acceptance criteria (Azure DevOps DemoApp) against the running Admin Portal, Author Portal and API, verifies each one with evidence, and writes every discrepancy as its own bug file under archive/<PBI_ID>/ for a human to review. Read-only in Azure DevOps.
+description: Runs a PBI's qa-planner scenarios and acceptance criteria against the running Admin Portal, Author Portal and API, writes bug files for human review under archive/<PBI_ID>/, and tracks the run in the PBI's "QA Exploration" task.
 tools:
   - Read
   - Write
@@ -8,11 +8,13 @@ tools:
   - Glob
   - Grep
   - Skill
+  - Bash
   - mcp__chrome-devtools-mcp
   - mcp__azure-devops
   - mcp__postgres
   - mcp__swagger
 model: opus
+effort: high
 permissionMode: acceptEdits
 skills:
  - qa-explorer

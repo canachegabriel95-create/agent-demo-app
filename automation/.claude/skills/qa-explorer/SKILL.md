@@ -1,15 +1,16 @@
 ---
 name: qa-explorer
-description: Executes the test scenarios from a qa-planner QA plan and a work item's acceptance criteria (Azure DevOps project DemoApp) against the running Local Content Review Platform (Admin and Author Portals, API, database), verifies each one with evidence, and records every confirmed discrepancy as its own bug file for a human to review.
+description: Executes the test scenarios from a qa-planner QA plan and a work item's acceptance criteria (Azure DevOps project DemoApp) against the running Local Content Review Platform (Admin and Author Portals, API, database), verifies each one with evidence, records every confirmed discrepancy as its own bug file for a human to review, and tracks the run in the PBI's "QA Exploration" task (created if missing, set in progress, run summary written to its Description, then closed).
 ---
 
 # QA Explorer
 
 The QA Explorer is the agent that touches the running application. It takes the scenarios `qa-planner`
 wrote, drives the real Admin Portal, Author Portal and API through each one, and decides — with
-evidence, not assumption — whether the result matches what was expected. It never files anything in
-the tracker: every discrepancy becomes one self-contained bug file with a line where a human writes
-`CONFIRMED` or `REJECTED`. Only a `CONFIRMED` line lets a later agent act on it.
+evidence, not assumption — whether the result matches what was expected. It files no bugs or test
+cases in the tracker: every discrepancy becomes one self-contained bug file with a line where a human
+writes `CONFIRMED` or `REJECTED`. Only a `CONFIRMED` line lets a later agent act on it. On the board it
+only tracks its own run, in the PBI's `QA Exploration - …` task, the way `qa-planner` tracks its plan.
 
 **System under test:** the Local Content Review Platform — one ASP.NET Core API (http://localhost:5080)
 behind the **Admin Portal** (http://localhost:5173) and the **Author Portal** (http://localhost:5174),
@@ -21,6 +22,7 @@ is already in your context (domain, lifecycle, validation limits, API convention
 
 | File | When |
 |---|---|
+| [references/ado-qa-task.md](references/ado-qa-task.md) | Steps 0 and 11 — resolve the PBI, find/create the QA Exploration task, in progress, summary, close |
 | [references/environment.md](references/environment.md) | Step 1 — URLs, sessions, calling the API from the browser, conventions to judge against, DB rules |
 | [references/fixtures.md](references/fixtures.md) | Step 4 — run id, fixture recipes, what cleanup means in a system without deletes |
 | [references/output-templates.md](references/output-templates.md) | Steps 7–9 — `TEST_SCENARIOS.md`, bug file, severity guide |
@@ -53,9 +55,10 @@ Choosing the plan:
 
 ## Inputs
 
-- `Explore Story <ID>` / `Explore Task <ID>` (PBI or Task). A Task that is not the QA plan task narrows
-  the scope to that Task; its parent is the PBI.
-- Confirmation that the Admin Portal tab is signed in (the human does that; never ask for credentials).
+- `Explore Story <ID>` / `Explore Task <ID>` (PBI or Task). A Task that is not the QA Plan or QA
+  Exploration task narrows the scope to that Task; its parent is the PBI (`references/ado-qa-task.md` §1).
+- Nothing about logins: the agent signs in itself with `tools/qa-login.mjs` (see `environment.md`).
+  If the helper reports a setup problem, ask the human to fix it — never ask for credentials.
 
 Scenario sources, merged in this order:
 1. The QA plan (above).
@@ -72,15 +75,19 @@ and ignore `Tests:` lines in docs and the test names in `docs/traceability.md`.
 
 - `chrome-devtools-mcp` — primary: navigate, click, fill, snapshots, screenshots, computed styles,
   network requests, `evaluate_script` for API calls with the tab's token (see `environment.md`).
-- `azure-devops` — read the PBI, parent Feature, `[Fxx.n]` dependencies, the QA plan Task, existing test
-  cases. **Read-only.** Never call `*_write`, `repo_*`, `pipelines_*` or `search_code`. If it fails
-  with an auth error, ask the human to reconnect (`/mcp`); never open Azure DevOps in the browser.
+- `azure-devops` — read the PBI, parent Feature, `[Fxx.n]` dependencies, the QA Plan task, existing test
+  cases. Write access **only to the PBI's QA Exploration task** (create it, change its state, write its
+  Description, add a comment — `references/ado-qa-task.md`). Never call `repo_*`, `pipelines_*`,
+  `search_code`, `testplan_*_write` or a write on any other work item. If it fails with an auth error,
+  ask the human to reconnect (`/mcp`); never open Azure DevOps in the browser.
 - `swagger` — the live contract (`search_endpoints`, `get_endpoint`, `get_request_schema`,
   `get_response_schema`). Targeted calls only.
 - `postgres` — read-only `SELECT` on `public`, for BE effects and precondition/cleanup checks. Never to
   decide an FE result.
+- `Bash` — only `node tools/qa-login.mjs …` (start the QA Chrome, sign in). No other commands.
 - `Read` / `Glob` / `Grep` — this skill's references, the archive, the lessons file, and `docs/` /
-  `AGENTS.md` of the application repository (read-only).
+  `AGENTS.md` of the application repository (read-only). From `automation/` they are `../docs/` and
+  `../AGENTS.md`; all doc lookups use these tools, never Bash.
 - `Write` / `Edit` — only the artifacts under `archive/<PBI_ID>/` and the lessons file.
 
 ## Testing approach — test like a human
@@ -101,14 +108,17 @@ and ignore `Tests:` lines in docs and the test names in `docs/traceability.md`.
 
 ## Workflow
 
-1. **Environment.** Read `references/environment.md`. Check `/health`, both portals, and that the admin
-   tab is signed in. Read `../../../lessons/qa-explorer-lessons.md` and apply it (a lesson overrides
+0. **Board.** Read `references/ado-qa-task.md`. Resolve the PBI, find or create its QA Exploration task,
+   and move it to in progress. The same children read gives you the QA Plan task (Handoff section).
+1. **Environment.** Read `references/environment.md`. Check `/health` and both portals, then run
+   `node tools/qa-login.mjs admin` (it starts the QA Chrome if needed), call `list_pages` (page ids
+   change after a Chrome restart) and select the Admin Portal tab. Read `../../../lessons/qa-explorer-lessons.md` and apply it (a lesson overrides
    general guidance here, never the Guardrails).
 2. **Prior run.** If `archive/<PBI_ID>/TEST_SCENARIOS.md` or `bugs/` exist, read them: continue `BUG-NN`
    and `AH#` numbering, note open bugs (`PENDING`/`CONFIRMED`) vs. `REJECTED`, and the residue left last time.
 3. **Scenarios.** Choose the plan (Handoff section), read the PBI and its AC, merge sources, cross-check
    every AC bullet. Look up the Feature in the feature map and read only the page doc and `api.md`
-   section it names (grep the `##` heading, Read with `offset`/`limit`).
+   section it names in `../docs/` (`Grep` the `##` heading, `Read` with `offset`/`limit`).
 4. **Preflight** (before any data-changing action, including negative requests and fixtures). Read
    `references/fixtures.md`. Pick the run id. For each scenario confirm: role available now, starting
    state, a supported way to build a run-tagged fixture, separate fixtures for state-consuming paths,
@@ -131,14 +141,24 @@ and ignore `Tests:` lines in docs and the test names in `docs/traceability.md`.
    `TEST_SCENARIOS.md`; a re-run updates existing rows. Add proposed test-case blocks for `testcase: yes`.
 10. **Report** to the human: counts per result, bug list with severity, residue, blocked items and the
     human action each needs, and that every `Status:` line awaits review.
+11. **Close on the board.** Write the run summary into the QA Exploration task's Description, close it if
+    nothing is Blocked and cleanup was verified (otherwise leave it in progress), and add the summary
+    comment (`references/ado-qa-task.md` §4). If the run stopped early, leave the task in progress with
+    a comment saying why.
 
 ## Guardrails / Rules
 
-- Never create, update or close a work item, test case or bug in Azure DevOps — the QA plan Task
-  included. This agent writes only files under `archive/<PBI_ID>/` and the lessons file.
-- Never accept, type, store or print a credential: no admin password, no session token (use it inside
-  `evaluate_script` only), no generated author password, no full invitation code in any artifact (use the
-  last 4 characters).
+- In Azure DevOps the only work item you may create or change is the PBI's QA Exploration task. Never
+  create Bug work items or test cases, and never change the PBI, its Feature, the QA Plan task or any
+  other item. Locally, write only files under `archive/<PBI_ID>/` and the lessons file.
+- **Credentials (the one canonical rule; references point here).** Never accept, type, store or print
+  a credential, in chat, files, the board or tool output:
+  - sign in only through `tools/qa-login.mjs`; never read, list or open `automation/.secrets/`, never pass
+    a credential on a command line, never type one with `fill` / `type_text`;
+  - session tokens stay inside `evaluate_script`: never `return` one, strip `token` from a login response;
+  - generated author passwords never leave the script that created them;
+  - invitation codes appear only as their last 4 characters;
+  - never select `password_hash` / `token_hash` values (`count(*)` / `IS NULL` checks are fine).
 - Synthetic, run-tagged data only (`example.com` emails). Never real personal data. Never change seeded or
   demo records or another run's leftovers.
 - No data-changing action before its preflight is recorded; always clean up and verify; report residue
@@ -148,7 +168,8 @@ and ignore `Tests:` lines in docs and the test names in `docs/traceability.md`.
 - Never edit `docs/`, `CLAUDE.md`, `AGENTS.md` or anything outside `automation/archive/` and `automation/lessons/`.
   Never start, stop or reset the stack or the database.
 - Bounded exploration: what the plan and the AC call for, plus the edge states in the matching page
-  doc. Not an open-ended audit — note anything else in one line under "Out of scope observations".
+  doc. Not an open-ended audit — note anything else in one line under "Out of scope observations" in
+  `TEST_SCENARIOS.md` (copied into the board summary).
 - Every bug file stands alone: steps, actual, expected (with source), evidence.
 - Keep the plan's ids and flags; never renumber.
 
@@ -159,7 +180,7 @@ When the human corrects you or teaches you something that should hold next time,
 
 ## Example
 
-User: "Explore Story 112. Admin tab is signed in."
+User: "Explore Story 112."
 
 The agent checks `/health`, reads `archive/112/QA_PLAN.md` (an `[F10.4]` story), starts with its Handoff,
 and maps the six AC bullets to FE1–FE6 / BE1–BE5 plus one ad hoc `AH1` for an uncovered bullet. Preflight:
@@ -169,3 +190,6 @@ the Admin Portal, checks the rejection reason in the Author Portal, sends a stal
 reason straight to the API, then reactivates the suspended author and records the author, the published
 and rejected articles as residue. Output: `TEST_SCENARIOS.md` with 12 rows and three proposed test cases
 (`testcase: yes` in the plan), and `bugs/BUG-01-reject-dialog-accepts-whitespace-reason.md`, all `PENDING`.
+On the board, the `QA Exploration - [F10.4] …` task under PBI 112 was created and set in progress at the
+start; at the end its Description holds the run summary, it is closed, and a comment states
+`11 pass / 1 fail / 0 blocked, 1 bug files pending review`.

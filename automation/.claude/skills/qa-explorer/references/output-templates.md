@@ -9,7 +9,7 @@ Read when writing the artifacts. All paths are under `automation/archive/<PBI_ID
 # Executed Test Scenarios for <PBI_ID>
 
 Run: <run-id> · <YYYY-MM-DD> · plan source: archive QA_PLAN.md | ADO task <id> | none (AC only)
-Environment: API build/health <status>, portals <Admin|Author>, admin signed in by the human
+Environment: API build/health <status>, portals <Admin|Author>, admin signed in via qa-login (API | form)
 
 ## Test Data and Cleanup
 
@@ -37,6 +37,9 @@ Expected: <observable result>
 Flags (from plan): automate <yes|no> · regression <yes|no>
 Status: PENDING
 <!-- Change to CONFIRMED to have it created in Azure DevOps, or REJECTED to drop it. -->
+
+## Out of scope observations
+- <one line each: what was seen outside the plan and AC, where, and why it was not pursued> (or "None")
 ```
 
 - Ad hoc scenarios (not in the plan) get ids `AH1`, `AH2`, … continuing across re-runs; never reuse a
@@ -72,7 +75,7 @@ related: [<BUG-NN>, ...]
 <what should happen, and the source: AC, CLAUDE.md rule, docs page, Swagger>
 
 ## Evidence
-<status + body excerpt + X-Correlation-Id, computed style, DOM snapshot excerpt, SELECT result, screenshot path — enough to verify without re-running. No tokens, passwords or full invitation codes.>
+<status + body excerpt + X-Correlation-Id, computed style, DOM snapshot excerpt, SELECT result, screenshot path — enough to verify without re-running. Credential rule: SKILL.md → Guardrails.>
 
 ## Environment
 Portal <Admin|Author> (<url>), API http://localhost:5080, browser, run <run-id>, date

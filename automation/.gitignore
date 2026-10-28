@@ -1,1 +1,3 @@
 archive
+.secrets/*
+!.secrets/qa.env.example

@@ -17,8 +17,8 @@ you create, so leftovers are traceable and never confused with demo data:
 | Rejection / suspension reason | `QA <run-id>: <why>` padded to the required length |
 
 Author passwords: generate one inside `evaluate_script` per account (meets 12–128, upper, lower, digit,
-symbol), use it for registration and the API login in the same script, and do not return or record it.
-The account is then reachable only through the token you put in `sessionStorage`; that is intended.
+symbol) and use it for registration and the API login in the same script (credential rules: SKILL.md →
+Guardrails). The account is then reachable only through the token you put in `sessionStorage`; that is intended.
 
 ## Recipes (API, via `evaluate_script` — see `environment.md`)
 

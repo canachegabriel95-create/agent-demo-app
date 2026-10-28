@@ -39,3 +39,10 @@ Maps stories to the automated tests that cover them.
 | F17.7 | `automation/fe_automatio/tests/admin/users-list.spec.ts` | clicking an author opens the detail page (AC3) |
 | F17.7 | `automation/fe_automatio/tests/admin/users-list.spec.ts` | empty / loading / error states (AC4) |
 | F17.7 | `automation/fe_automatio/tests/admin/users-list.spec.ts` | passwords and hashes are never sent or shown (AC5) |
+| F17.8 | `automation/fe_automatio/tests/admin/user-detail.spec.ts` | editing the name and biography saves them; email and role are read-only / the name is trimmed (AC1) |
+| F17.8 | `automation/fe_automatio/tests/admin/user-detail.spec.ts` | a 1-character name, a name over 100 characters, a biography over 1000 characters are rejected (AC2) |
+| F17.8 | `automation/fe_automatio/tests/admin/user-detail.spec.ts` | suspending needs a reason of at least 10 characters and then marks the author Suspended (AC3) |
+| F17.8 | `automation/fe_automatio/tests/admin/user-detail.spec.ts` | a suspended author's existing session is rejected on the next request (AC4) |
+| F17.8 | `automation/fe_automatio/tests/admin/user-detail.spec.ts` | reactivating restores the Active status (AC5) |
+| F17.8 | `automation/fe_automatio/tests/admin/user-detail.spec.ts` | saving over a newer version shows the conflict message (AC6) |
+| F17.8 | `automation/fe_automatio/tests/admin/user-detail.spec.ts` | an unknown author id shows the not-found state (AC7) |

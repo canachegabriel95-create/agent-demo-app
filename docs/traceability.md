@@ -28,3 +28,8 @@ Maps stories to the automated tests that cover them.
 | F17.5 | `automation/fe_automatio/tests/admin/invitations.spec.ts` | only Available invitations can be revoked (AC4) |
 | F17.5 | `automation/fe_automatio/tests/admin/invitations.spec.ts` | revoking an invitation that changed meanwhile shows the conflict message (AC5) |
 | F17.5 | `automation/fe_automatio/tests/admin/invitations.spec.ts` | empty / loading / error states (AC6) |
+| F17.6 | `automation/fe_automatio/tests/admin/create-invitation.spec.ts` | creating with the default 7 days shows the code once and lists the invitation (AC1) |
+| F17.6 | `automation/fe_automatio/tests/admin/create-invitation.spec.ts` | 1 and 30 days accepted, 0 and 31 rejected (AC2) |
+| F17.6 | `automation/fe_automatio/tests/admin/create-invitation.spec.ts` | missing, invalid and over-254-character emails are rejected (AC3) |
+| F17.6 | `automation/fe_automatio/tests/admin/create-invitation.spec.ts` | a second active invitation for the same email is rejected (AC4) — **expected failure: known defect, the API accepts it** |
+| F17.6 | `automation/fe_automatio/tests/admin/create-invitation.spec.ts` | cancel closes the dialog without creating an invitation (AC5) |

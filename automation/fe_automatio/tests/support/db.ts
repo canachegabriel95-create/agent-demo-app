@@ -122,6 +122,27 @@ export async function deleteUsers(ids: string[]): Promise<void> {
   });
 }
 
+const normalize = (email: string) => email.trim().toLowerCase();
+
+export async function userExists(email: string): Promise<boolean> {
+  return withDb(async (db) => {
+    const { rows } = await db.query('SELECT 1 FROM users WHERE normalized_email = $1', [normalize(email)]);
+    return rows.length > 0;
+  });
+}
+
+/** Removes users that were created through the app (e.g. a registration) rather than by createUser. */
+export async function deleteUsersByEmail(emails: string[]): Promise<void> {
+  if (emails.length === 0) return;
+  const ids = await withDb(async (db) => {
+    const { rows } = await db.query<{ id: string }>('SELECT id FROM users WHERE normalized_email = ANY($1)', [
+      emails.map(normalize),
+    ]);
+    return rows.map((row) => row.id);
+  });
+  await deleteUsers(ids);
+}
+
 /** Removes every e2e user, e.g. leftovers of a crashed run. */
 export async function deleteLeftovers(): Promise<void> {
   const ids = await withDb(async (db) => {

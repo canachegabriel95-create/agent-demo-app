@@ -74,3 +74,7 @@ Maps stories to the automated tests that cover them.
 | F17.14 | `automation/fe_automatio/tests/author/layout.spec.ts` | logging out clears the session, returns to /login and revokes the token (AC2) |
 | F17.14 | `automation/fe_automatio/tests/author/layout.spec.ts` | a 401 from an API call clears the session and redirects to /login (AC3) |
 | F17.14 | `automation/fe_automatio/tests/author/layout.spec.ts` | admin pages are not part of the author portal / admin data is refused to an author / an unknown route shows the not-found view (AC4) |
+| F17.15 | `automation/fe_automatio/tests/author/dashboard.spec.ts` | the counts per status match the articles created through the API (AC1) |
+| F17.15 | `automation/fe_automatio/tests/author/dashboard.spec.ts` | another author's articles are not counted (AC2) |
+| F17.15 | `automation/fe_automatio/tests/author/dashboard.spec.ts` | the stat-* cards open the filtered article list (AC3) |
+| F17.15 | `automation/fe_automatio/tests/author/dashboard.spec.ts` | a new author sees zero counts / loading / error states (AC4) |

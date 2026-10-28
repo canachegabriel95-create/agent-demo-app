@@ -13,6 +13,7 @@ export interface TestUser {
 export interface NewUser {
   role: 'Administrator' | 'Author';
   status?: 'Active' | 'Suspended';
+  fullName?: string;
 }
 
 function databaseUrl(): string {
@@ -46,7 +47,7 @@ function hashPassword(password: string): string {
   return Buffer.concat([header, salt, key]).toString('base64');
 }
 
-export async function createUser({ role, status = 'Active' }: NewUser): Promise<TestUser> {
+export async function createUser({ role, status = 'Active', fullName = 'E2E Test User' }: NewUser): Promise<TestUser> {
   const id = randomUUID();
   const email = `${E2E_EMAIL_PREFIX}${id}@example.test`;
   // Random per user; satisfies the password policy (upper, lower, digit, symbol, 12+ chars).
@@ -62,7 +63,7 @@ export async function createUser({ role, status = 'Active' }: NewUser): Promise<
         id,
         email,
         hashPassword(password),
-        'E2E Test User',
+        fullName,
         role,
         status,
         suspended ? 'Suspended by an automated test.' : null,

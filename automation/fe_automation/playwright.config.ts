@@ -8,6 +8,7 @@ if (existsSync(envFile)) process.loadEnvFile(envFile);
 
 export default defineConfig({
   testDir: './tests',
+  globalSetup: './baseTest/globalSetup.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

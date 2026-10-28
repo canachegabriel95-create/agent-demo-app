@@ -1,6 +1,6 @@
 import { test as base, type Page } from '@playwright/test';
 import { closeDb, runQuery } from '../db/db';
-import { login } from './login';
+import { useSession } from './login';
 
 type Fixtures = {
   adminPage: Page;
@@ -12,15 +12,15 @@ type WorkerFixtures = {
 };
 
 export const test = base.extend<Fixtures, WorkerFixtures>({
-  // A page already signed in to the Admin Portal.
+  // A page already signed in to the Admin Portal (token from globalSetup.ts).
   adminPage: async ({ page }, use) => {
-    await login(page, 'admin');
+    await useSession(page, 'admin', process.env.ADMIN_SESSION_TOKEN!);
     await use(page);
   },
 
-  // A page already signed in to the Author Portal.
+  // A page already signed in to the Author Portal (token from globalSetup.ts).
   authorPage: async ({ page }, use) => {
-    await login(page, 'author');
+    await useSession(page, 'author', process.env.AUTHOR_SESSION_TOKEN!);
     await use(page);
   },
 

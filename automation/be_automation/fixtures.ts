@@ -4,6 +4,7 @@ import { test as base, expect, request, type APIRequestContext } from '@playwrig
 export { expect };
 
 export interface Author {
+  id: string;
   email: string;
   password: string;
   token: string;
@@ -58,7 +59,8 @@ export const test = base.extend<{ adminApi: APIRequestContext; newAuthor: () => 
       const token = await login(anonymous, email, password, 'Author');
       const api = await authenticated(baseURL!, token);
       contexts.push(api);
-      return { email, password, token, api };
+      const { id } = await (await api.get('/api/auth/me')).json();
+      return { id, email, password, token, api };
     });
     await Promise.all(contexts.map((c) => c.dispose()));
   },

@@ -50,3 +50,9 @@ Maps stories to the automated tests that cover them.
 | F17.9 | `automation/fe_automatio/tests/admin/review-queue.spec.ts` | sorts by submission date / paginates 20 articles per page / an approved or rejected article leaves the queue after a refresh (AC2) |
 | F17.9 | `automation/fe_automatio/tests/admin/review-queue.spec.ts` | a row opens the review detail page (AC3) |
 | F17.9 | `automation/fe_automatio/tests/admin/review-queue.spec.ts` | empty / loading / error states (AC4) |
+| F17.10 | `automation/fe_automatio/tests/admin/review-detail.spec.ts` | shows the title, summary and body as plain text (AC1) |
+| F17.10 | `automation/fe_automatio/tests/admin/review-detail.spec.ts` | approving publishes the article and removes it from the queue (AC2) |
+| F17.10 | `automation/fe_automatio/tests/admin/review-detail.spec.ts` | rejecting needs a reason of at least 10 characters and stores it (AC3) |
+| F17.10 | `automation/fe_automatio/tests/admin/review-detail.spec.ts` | approving an article the author withdrew meanwhile shows the conflict message (AC4) |
+| F17.10 | `automation/fe_automatio/tests/admin/review-detail.spec.ts` | review actions are blocked for a suspended author's article (AC5) |
+| F17.10 | `automation/fe_automatio/tests/admin/review-detail.spec.ts` | earlier decisions stay in the history after the article is resubmitted (AC6) |

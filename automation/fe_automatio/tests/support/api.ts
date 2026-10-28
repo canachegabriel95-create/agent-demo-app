@@ -37,19 +37,23 @@ export async function firstCategoryId(api: Api): Promise<string> {
 }
 
 /** A Draft that already satisfies the submit rules. */
-export async function createDraft(api: Api, title = `E2E article ${crypto.randomUUID()}`): Promise<Article> {
+export async function createDraft(
+  api: Api,
+  title = `E2E article ${crypto.randomUUID()}`,
+  body = 'A body that is long enough to be submitted. '.repeat(4),
+): Promise<Article> {
   return ok<Article>(
     await api.post('/api/articles', {
       title,
       summary: 'A summary that is long enough to be submitted.',
-      body: 'A body that is long enough to be submitted. '.repeat(4),
+      body,
       categoryId: await firstCategoryId(api),
     }),
   );
 }
 
-export async function createSubmittedArticle(api: Api, title?: string): Promise<Article> {
-  const draft = await createDraft(api, title);
+export async function createSubmittedArticle(api: Api, title?: string, body?: string): Promise<Article> {
+  const draft = await createDraft(api, title, body);
   return ok<Article>(await api.post(`/api/articles/${draft.id}/submit`, { version: draft.version }));
 }
 
@@ -76,4 +80,22 @@ export async function reject(adminApi: Api, article: Article, reason = 'Needs mo
       reason,
     }),
   );
+}
+
+export async function withdraw(api: Api, article: Article): Promise<Article> {
+  return ok<Article>(await api.post(`/api/articles/${article.id}/withdraw`, { version: article.version }));
+}
+
+/** Edits a Rejected article (new title) and submits it again. */
+export async function resubmit(api: Api, article: Article, title = `Revised ${crypto.randomUUID()}`): Promise<Article> {
+  const edited = await ok<Article>(
+    await api.put(`/api/articles/${article.id}`, {
+      title,
+      summary: 'A revised summary that is long enough to be submitted.',
+      body: 'A revised body that is long enough to be submitted. '.repeat(4),
+      categoryId: await firstCategoryId(api),
+      version: article.version,
+    }),
+  );
+  return ok<Article>(await api.post(`/api/articles/${edited.id}/submit`, { version: edited.version }));
 }

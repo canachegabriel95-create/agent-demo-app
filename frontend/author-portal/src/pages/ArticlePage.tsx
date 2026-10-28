@@ -11,6 +11,7 @@ import {
   type ArticleStatus,
 } from '../api/articles';
 import { ApiError } from '../api/client';
+import { REVISION_STATUS_LABELS, createRevision } from '../api/revisions';
 import { ConfirmDialog, EmptyState, ErrorState, LoadingState } from '../components';
 import styles from './ArticlePage.module.css';
 
@@ -26,7 +27,10 @@ export const DELETE_CONFLICT_MESSAGE =
 export const STATUS_CONFLICT_MESSAGE = 'This article changed status. Refresh to continue.';
 export const PENDING_NOTICE =
   'Pending review – read-only until an administrator decides or you withdraw it.';
-export const PUBLISHED_NOTICE = 'Published – this article is read-only.';
+export const PUBLISHED_NOTICE =
+  'Published – to change it, start a revision. Readers keep seeing this version until an administrator approves the revision.';
+export const REVISE_CONFLICT_MESSAGE =
+  'This article cannot be revised right now: it may already have a revision in progress. Refresh to continue.';
 
 const dateTime = new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -56,6 +60,7 @@ export function ArticlePage() {
   const [notFound, setNotFound] = useState(false);
   const [loadError, setLoadError] = useState<Failure>();
   const [dialog, setDialog] = useState<'delete' | 'submit' | 'withdraw'>();
+  const [revising, setRevising] = useState(false);
   const [notice, setNotice] = useState('');
   const [status, setStatus] = useState('');
   const [submitErrors, setSubmitErrors] = useState<string[]>([]);
@@ -158,6 +163,25 @@ export function ArticlePage() {
     }
 
     return undefined;
+  }
+
+  async function startRevision() {
+    if (!article || revising) {
+      return;
+    }
+
+    setRevising(true);
+    try {
+      const revision = await createRevision(article.id);
+      navigate(`/revisions/${revision.id}`);
+    } catch (failure) {
+      if (failure instanceof ApiError && failure.status === 409) {
+        setNotice(REVISE_CONFLICT_MESSAGE);
+      } else {
+        setNotice(describe(failure).message);
+      }
+      setRevising(false);
+    }
   }
 
   if (notFound) {
@@ -285,6 +309,23 @@ export function ArticlePage() {
         </p>
       )}
 
+      {article.openRevision && (
+        <div
+          className={styles.revision}
+          role="region"
+          aria-label="Revision"
+          data-testid="article-revision"
+        >
+          <strong data-testid="article-revision-status">
+            {REVISION_STATUS_LABELS[article.openRevision.status]}
+          </strong>{' '}
+          <span className={styles.when}>updated {when(article.openRevision.updatedAt)}</span>{' '}
+          <Link to={`/revisions/${article.openRevision.id}`} data-testid="article-revision-link">
+            Open the revision
+          </Link>
+        </div>
+      )}
+
       {rejection && (
         <div
           className={styles.review}
@@ -346,6 +387,17 @@ export function ArticlePage() {
             data-testid="article-withdraw"
           >
             Withdraw submission
+          </button>
+        )}
+        {can('revise') && (
+          <button
+            type="button"
+            className={styles.primary}
+            onClick={startRevision}
+            disabled={revising}
+            data-testid="article-revise"
+          >
+            {revising ? 'Starting…' : 'Revise this article'}
           </button>
         )}
         {can('delete') && (

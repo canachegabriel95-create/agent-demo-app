@@ -13,6 +13,9 @@ public class ContentReviewDbContext(DbContextOptions<ContentReviewDbContext> opt
     public DbSet<Article> Articles => Set<Article>();
     public DbSet<ArticleSubmission> ArticleSubmissions => Set<ArticleSubmission>();
     public DbSet<Review> Reviews => Set<Review>();
+    public DbSet<ArticleRevision> ArticleRevisions => Set<ArticleRevision>();
+    public DbSet<RevisionReview> RevisionReviews => Set<RevisionReview>();
+    public DbSet<ArticlePublishedVersion> ArticlePublishedVersions => Set<ArticlePublishedVersion>();
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

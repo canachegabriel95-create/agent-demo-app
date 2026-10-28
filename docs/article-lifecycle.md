@@ -13,7 +13,7 @@ stateDiagram-v2
     PendingReview --> Rejected: reject
     Rejected --> Rejected: edit
     Rejected --> PendingReview: resubmit
-    Published --> [*]: read-only
+    Published --> Published: revise (a separate revision, see revisions.md)
 ```
 
 ## Transitions
@@ -30,8 +30,9 @@ These are the only valid ones. Anything else is refused.
 | PendingReview | Reject | Rejected | Administrator |
 | Rejected | Edit | Rejected | Owner |
 | Rejected | Submit (resubmit) | PendingReview | Owner |
+| Published | Revise | Published | Owner |
 
-- **Published** allows no action to anyone: it is read-only.
+- **Published** cannot be edited, withdrawn or deleted by anyone. Its owner can only **revise** it: that starts a *revision*, a separate version with its own lifecycle ([revisions.md](revisions.md)); the article itself stays Published and unchanged until a revision is approved. This replaces the rule "published articles are read-only" of the initial version (F09).
 - **PendingReview** cannot be edited or deleted; withdraw it first.
 - A **Rejected** article can be edited and resubmitted but not deleted.
 - Delete exists only for a Draft.
@@ -42,7 +43,7 @@ These are the only valid ones. Anything else is refused.
 |---|---|
 | `CanPerform(status, action, actor)` | Whether this actor may do this action in this status. |
 | `Next(status, action)` | The status afterwards (`null` for Delete, which removes the article). Throws `InvalidTransitionException` when no actor can do the action. |
-| `AllowedActions(status, actor)` | The actions the actor may take, in the order Edit, Delete, Submit, Withdraw, Approve, Reject. The API sends them to the portals as `allowedActions` so the UI never has its own copy of the rules. |
+| `AllowedActions(status, actor)` | The actions the actor may take, in the order Edit, Delete, Submit, Withdraw, Approve, Reject, Revise. The API sends them to the portals as `allowedActions` so the UI never has its own copy of the rules. |
 | `EnsureCanPerform(status, action, actor)` | Throws `InvalidTransitionException` when not allowed. |
 
 `Article` has the matching methods: `UpdateContent`, `EnsureCanDelete`, `Submit`, `Withdraw`, `Approve` and `Reject`. Each asks the state machine first, so no code path can bypass it. They change the article only; the submission snapshot (F09.2) and the review record (F10.2) are written by the services that call them.
@@ -56,6 +57,7 @@ What a transition changes on the article:
 | Approve | `status` Published, `publishedAt` = now |
 | Reject | `status` Rejected (the reason belongs to the review record) |
 | Edit | title, summary, body, category, `updatedAt` |
+| Revise | nothing on the article: the service creates the revision. `Revise` is offered only while the article has no open revision |
 
 ## Validation
 

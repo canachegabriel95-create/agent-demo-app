@@ -25,6 +25,7 @@ public class ArticleLifecycleTests
         (ArticleStatus.PendingReview, ArticleAction.Reject, ArticleStatus.Rejected, ActorKind.Administrator),
         (ArticleStatus.Rejected, ArticleAction.Edit, ArticleStatus.Rejected, ActorKind.Owner),
         (ArticleStatus.Rejected, ArticleAction.Submit, ArticleStatus.PendingReview, ActorKind.Owner),
+        (ArticleStatus.Published, ArticleAction.Revise, ArticleStatus.Published, ActorKind.Owner),
     ];
 
     public static TheoryData<ArticleStatus, ArticleAction, ActorKind> EveryCombination()
@@ -50,9 +51,9 @@ public class ArticleLifecycleTests
     [Fact]
     public void The_matrix_covers_every_status_action_and_actor()
     {
-        Assert.Equal(4 * 6 * 2, Statuses.Length * Actions.Length * Actors.Length);
-        Assert.Equal(48, EveryCombination().Count);
-        Assert.Equal(8, Documented.Length);
+        Assert.Equal(4 * 7 * 2, Statuses.Length * Actions.Length * Actors.Length);
+        Assert.Equal(56, EveryCombination().Count);
+        Assert.Equal(9, Documented.Length);
     }
 
     [Theory]
@@ -104,7 +105,7 @@ public class ArticleLifecycleTests
     [InlineData(ArticleStatus.PendingReview, ActorKind.Administrator, new[] { ArticleAction.Approve, ArticleAction.Reject })]
     [InlineData(ArticleStatus.Draft, ActorKind.Administrator, new ArticleAction[0])]
     [InlineData(ArticleStatus.Rejected, ActorKind.Administrator, new ArticleAction[0])]
-    [InlineData(ArticleStatus.Published, ActorKind.Owner, new ArticleAction[0])]
+    [InlineData(ArticleStatus.Published, ActorKind.Owner, new[] { ArticleAction.Revise })]
     [InlineData(ArticleStatus.Published, ActorKind.Administrator, new ArticleAction[0])]
     public void AllowedActions_lists_what_the_actor_may_do_in_order(ArticleStatus status, ActorKind actor, ArticleAction[] expected)
     {
@@ -112,9 +113,9 @@ public class ArticleLifecycleTests
     }
 
     [Fact]
-    public void A_published_article_allows_nothing_to_anyone()
+    public void A_published_article_can_only_be_revised_by_its_owner_and_never_edited()
     {
-        foreach (var action in Actions)
+        foreach (var action in Actions.Where(a => a != ArticleAction.Revise))
         {
             foreach (var actor in Actors)
             {
@@ -122,7 +123,8 @@ public class ArticleLifecycleTests
             }
         }
 
-        Assert.Empty(ArticleLifecycle.AllowedActions(ArticleStatus.Published, ActorKind.Owner));
+        Assert.True(ArticleLifecycle.CanPerform(ArticleStatus.Published, ArticleAction.Revise, ActorKind.Owner));
+        Assert.False(ArticleLifecycle.CanPerform(ArticleStatus.Published, ArticleAction.Revise, ActorKind.Administrator));
         Assert.Empty(ArticleLifecycle.AllowedActions(ArticleStatus.Published, ActorKind.Administrator));
     }
 
@@ -148,6 +150,7 @@ public class ArticleLifecycleTests
     [InlineData(ArticleStatus.Draft, ArticleAction.Withdraw, "Article cannot be withdrawn in status Draft.")]
     [InlineData(ArticleStatus.Draft, ArticleAction.Approve, "Article cannot be approved in status Draft.")]
     [InlineData(ArticleStatus.Rejected, ArticleAction.Reject, "Article cannot be rejected in status Rejected.")]
+    [InlineData(ArticleStatus.Draft, ArticleAction.Revise, "Article cannot be revised in status Draft.")]
     public void A_refused_action_explains_itself_in_one_sentence_with_the_status(
         ArticleStatus status, ArticleAction action, string message)
     {

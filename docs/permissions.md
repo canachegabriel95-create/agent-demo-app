@@ -33,7 +33,7 @@ A request is authenticated by the `Session` bearer scheme (see [authentication.m
 | `GET /api/auth/me`, `POST /api/auth/logout` | any authenticated | - |
 | `GET /api/categories` *(later)* | any authenticated | - |
 | `/api/admin/**` | `AdminOnly` | `AdminControllerBase` |
-| `/api/me/**`, `/api/articles/**`, `/api/feed/**` | `AuthorOnly` | `AuthorControllerBase` |
+| `/api/me/**`, `/api/articles/**`, `/api/revisions/**`, `/api/feed/**` | `AuthorOnly` | `AuthorControllerBase` |
 
 Only the first four rows are allowed to be anonymous. The test `Every_registered_endpoint_requires_authorization_except_the_documented_anonymous_ones` lists the anonymous endpoints exactly; the story that adds registration or Swagger must add its endpoint to that list (and to this table) on purpose.
 

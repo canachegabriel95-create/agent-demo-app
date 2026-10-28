@@ -100,7 +100,7 @@ public class ReviewDecisionTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task The_author_sees_a_published_article_with_no_actions_and_the_approval()
+    public async Task The_author_sees_a_published_article_that_can_only_be_revised_and_the_approval()
     {
         var a = await SubmitAsync();
         await ApproveAsync(a);
@@ -108,7 +108,7 @@ public class ReviewDecisionTests(PostgresFixture postgres) : IAsyncLifetime
         var article = await AuthorViewAsync(a.Id);
 
         Assert.Equal("Published", article.GetProperty("status").GetString());
-        Assert.Empty(article.GetProperty("allowedActions").EnumerateArray());
+        Assert.Equal(["revise"], article.GetProperty("allowedActions").EnumerateArray().Select(a => a.GetString()));
         Assert.Equal("Approved", article.GetProperty("latestReview").GetProperty("decision").GetString());
     }
 

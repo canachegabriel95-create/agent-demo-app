@@ -26,6 +26,8 @@ function item(
     author: { id: 'a-ann', fullName: 'Ann Author', status: 'Active' },
     submittedAt: '2026-10-20T09:30:00Z',
     submissionVersion: 1,
+    kind: 'Submission',
+    revisionId: null,
     ...overrides,
   };
 }
@@ -304,5 +306,51 @@ describe('paging', () => {
 
     await waitFor(() => expect(router.state.location.search).toBe('?page=2'));
     await waitFor(() => expect(queueCalls().at(-1)!.search).toBe('?page=2'));
+  });
+});
+
+describe('revisions in the queue', () => {
+  const REVISION = item({
+    articleId: 'pub1',
+    title: 'Published article, revised',
+    kind: 'Revision',
+    revisionId: 'rev1',
+    submittedAt: '2026-10-21T08:00:00Z',
+  });
+
+  it('tells new submissions and revisions apart and links each to its own review page', async () => {
+    queue = () => json(pageOf([FIRST, REVISION]));
+    await openQueue();
+
+    const submissionRow = await screen.findByTestId('review-row-r1');
+    const revisionRow = await screen.findByTestId('review-row-pub1');
+    expect(within(submissionRow).getByTestId('review-row-kind')).toHaveTextContent(
+      'New submission',
+    );
+    expect(within(revisionRow).getByTestId('review-row-kind')).toHaveTextContent('Revision');
+    expect(within(submissionRow).getByRole('link', { name: 'Oldest article' })).toHaveAttribute(
+      'href',
+      '/reviews/r1',
+    );
+    expect(
+      within(revisionRow).getByRole('link', { name: 'Published article, revised' }),
+    ).toHaveAttribute('href', '/reviews/revisions/rev1');
+  });
+
+  it('opens the revision review page from the queue', async () => {
+    queue = () => json(pageOf([REVISION]));
+    const router = await openQueue();
+
+    await userEvent.click(await screen.findByRole('link', { name: 'Published article, revised' }));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/reviews/revisions/rev1'));
+  });
+
+  it('keeps the queue filters in the URL for revisions too', async () => {
+    queue = () => json(pageOf([REVISION]));
+    await openQueue('/reviews?categoryId=c-sci');
+
+    expect(queueCalls().at(-1)!.searchParams.get('categoryId')).toBe('c-sci');
+    expect(await screen.findByTestId('review-row-pub1')).toBeVisible();
   });
 });

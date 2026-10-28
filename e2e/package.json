@@ -1,0 +1,16 @@
+{
+  "name": "e2e",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Playwright tests for the Admin Portal and the Author Portal. They run against the stack started by scripts/start.ps1 (or scripts/start.sh).",
+  "scripts": {
+    "test": "playwright test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "^24.0.0",
+    "typescript": "^6.0.3"
+  }
+}

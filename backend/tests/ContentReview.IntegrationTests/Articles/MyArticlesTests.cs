@@ -177,7 +177,7 @@ public class MyArticlesTests(PostgresFixture postgres) : IAsyncLifetime
     [InlineData("Draft", new[] { "edit", "delete", "submit" })]
     [InlineData("PendingReview", new[] { "withdraw" })]
     [InlineData("Rejected", new[] { "edit", "submit" })]
-    [InlineData("Published", new string[0])]
+    [InlineData("Published", new[] { "revise" })]
     public async Task Allowed_actions_follow_the_lifecycle_for_each_status(string status, string[] expected)
     {
         var article = await CreateAsync("By status");

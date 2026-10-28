@@ -197,3 +197,12 @@
   background: var(--color-success-bg);
   color: var(--color-success);
 }
+
+/* The kind of item is written out; the colour only reinforces it. */
+.badge[data-status='Revision'] {
+  color: var(--color-primary);
+}
+
+.badge[data-status='Submission'] {
+  color: var(--color-muted);
+}

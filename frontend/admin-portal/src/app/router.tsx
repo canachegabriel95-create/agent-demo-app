@@ -8,6 +8,7 @@ import { LoginPage } from '../pages/LoginPage';
 import { NotFoundPage } from '../pages/NotFoundPage';
 import { ReviewPage } from '../pages/ReviewPage';
 import { ReviewQueuePage } from '../pages/ReviewQueuePage';
+import { RevisionReviewPage } from '../pages/RevisionReviewPage';
 import { UserDetailPage } from '../pages/UserDetailPage';
 import { UsersPage } from '../pages/UsersPage';
 import { Layout } from './Layout';
@@ -30,6 +31,7 @@ export const appRoutes: RouteObject[] = [
           { path: 'invitations', element: <InvitationsPage /> },
           { path: 'audit', element: <AuditPage /> },
           { path: 'reviews', element: <ReviewQueuePage /> },
+          { path: 'reviews/revisions/:revisionId', element: <RevisionReviewPage /> },
           { path: 'reviews/:articleId', element: <ReviewPage /> },
           { path: 'users', element: <UsersPage /> },
           { path: 'users/:id', element: <UserDetailPage /> },

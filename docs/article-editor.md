@@ -69,7 +69,7 @@ The action bar on `/articles/:id` follows `allowedActions` (the API's state mach
 | Draft | Edit, **Submit for review** (`article-submit`), Delete | |
 | PendingReview | **Withdraw submission** (`article-withdraw`) | "Pending review – read-only until an administrator decides or you withdraw it." |
 | Rejected | Edit, **Resubmit for review** | Rejection panel (below) |
-| Published | none | "Published – this article is read-only." |
+| Published | **Revise this article** (`article-revise`), only while no revision is open | "Published – to change it, start a revision. Readers keep seeing this version until an administrator approves the revision." |
 
 Submit and withdraw always ask first (`ConfirmDialog`: Cancel is focused; the confirm buttons are `article-submit-confirm` and `article-withdraw-confirm`). The submit dialog says the article becomes read-only until an administrator decides or the author withdraws it. After success the page shows the new status and a confirmation line.
 

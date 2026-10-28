@@ -215,50 +215,9 @@ public sealed class ArticleService(ContentReviewDbContext db, TimeProvider timeP
         return current is { } version ? new StaleVersionException(StaleVersionMessage, version) : new NotFoundException();
     }
 
-    private sealed record DraftContent(string Title, string Summary, string Body, Guid? CategoryId);
-
-    /// <summary>Applies the draft limits and reports every broken one at once, keyed by field name.</summary>
-    private async Task<DraftContent> ValidatedAsync(
-        string? title, string? summary, string? body, Guid? categoryId, CancellationToken cancellationToken)
-    {
-        // NUL cannot be stored, so it is removed before anything is measured.
-        var cleanTitle = (title ?? string.Empty).Replace("\0", string.Empty, StringComparison.Ordinal).Trim();
-        var cleanSummary = (summary ?? string.Empty).Replace("\0", string.Empty, StringComparison.Ordinal).Trim();
-        var cleanBody = (body ?? string.Empty).Replace("\0", string.Empty, StringComparison.Ordinal);
-
-        var errors = new Dictionary<string, string[]>();
-        if (cleanTitle.Length == 0)
-        {
-            errors["title"] = ["Title is required."];
-        }
-        else if (cleanTitle.Length > Article.TitleMaxLength)
-        {
-            errors["title"] = [$"Title must be at most {Article.TitleMaxLength} characters."];
-        }
-
-        if (cleanSummary.Length > Article.SummaryMaxLength)
-        {
-            errors["summary"] = [$"Summary must be at most {Article.SummaryMaxLength} characters."];
-        }
-
-        if (cleanBody.Length > Article.BodyMaxLength)
-        {
-            errors["body"] = [$"Body must be at most {Article.BodyMaxLength} characters."];
-        }
-
-        if (categoryId is { } category
-            && (category == Guid.Empty || !await db.Categories.AnyAsync(c => c.Id == category, cancellationToken)))
-        {
-            errors["categoryId"] = ["Category does not exist."];
-        }
-
-        if (errors.Count > 0)
-        {
-            throw new ValidationException(errors);
-        }
-
-        return new DraftContent(cleanTitle, cleanSummary, cleanBody, categoryId);
-    }
+    private Task<DraftContent> ValidatedAsync(
+        string? title, string? summary, string? body, Guid? categoryId, CancellationToken cancellationToken) =>
+        DraftContentValidator.ValidateAsync(db, title, summary, body, categoryId, cancellationToken);
 
     private async Task<ArticleDto> ToDtoAsync(Article article, CancellationToken cancellationToken)
     {
@@ -278,6 +237,21 @@ public sealed class ArticleService(ContentReviewDbContext db, TimeProvider timeP
             .Select(r => new LatestReview(r.Decision, r.Reason, r.DecidedAt))
             .FirstOrDefaultAsync(cancellationToken);
 
+        RevisionSummary? openRevision = null;
+        if (article.Status == ArticleStatus.Published)
+        {
+            openRevision = await db.ArticleRevisions.AsNoTracking()
+                .Where(r => r.ArticleId == article.Id && r.Status != RevisionStatus.Approved)
+                .Select(r => new RevisionSummary(r.Id, r.Status, r.UpdatedAt, r.SubmittedAt))
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        // Only one revision can be open: while there is one, starting another is not offered.
+        var allowed = article.AllowedActions(ActorKind.Owner)
+            .Where(a => a != ArticleAction.Revise || openRevision is null)
+            .Select(a => a.ToString().ToLowerInvariant())
+            .ToList();
+
         return new ArticleDto(
             article.Id,
             article.Title,
@@ -291,7 +265,9 @@ public sealed class ArticleService(ContentReviewDbContext db, TimeProvider timeP
             article.SubmittedAt,
             article.PublishedAt,
             latestReview,
-            article.AllowedActions(ActorKind.Owner).Select(a => a.ToString().ToLowerInvariant()).ToList(),
+            allowed,
+            openRevision,
+            article.PublishedVersion,
             article.Version);
     }
 }

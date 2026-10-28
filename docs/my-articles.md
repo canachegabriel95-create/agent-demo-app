@@ -2,6 +2,8 @@
 
 Route `/articles` (nav "My Articles"), source `frontend/author-portal/src/pages/MyArticlesPage.tsx`. Data: `GET /api/me/articles` (see [api.md](api.md#my-articles-author)).
 
+A published article that has a revision in progress shows the revision's status next to its own (`article-row-revision`, e.g. "Revision pending review") and an **Open revision** link to `/revisions/:id` (see [revisions.md](revisions.md)).
+
 ## Filters (all in the address)
 
 | Control | Parameter | Notes |

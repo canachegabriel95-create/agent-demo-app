@@ -298,7 +298,7 @@ public class ArticleLifecycleEntityTests
 
         article.Submit(T1);
         article.Approve(T1);
-        Assert.Empty(article.AllowedActions(ActorKind.Owner));
+        Assert.Equal([ArticleAction.Revise], article.AllowedActions(ActorKind.Owner));
         Assert.Empty(article.AllowedActions(ActorKind.Administrator));
     }
 }

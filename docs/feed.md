@@ -16,7 +16,7 @@ Each card is `feed-card-<id>`. States: loading, error with "Try again", "No publ
 
 ## `/feed/:id`
 
-Source `FeedArticlePage.tsx`. Title, category, author display name, date, summary and body, read-only: **no edit or delete controls, not even on the author's own article** (a published article cannot be changed). Draft, pending, rejected and unknown ids all show "Article not found". Loading and error (with retry) states exist.
+Source `FeedArticlePage.tsx`. Title, category, author display name, date, summary and body, read-only: **no edit or delete controls, not even on the author's own article** (a published article changes only when an administrator approves a revision, see [revisions.md](revisions.md)). Draft, pending, rejected and unknown ids all show "Article not found". Loading and error (with retry) states exist.
 
 ## Safe rendering
 

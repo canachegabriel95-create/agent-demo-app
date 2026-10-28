@@ -61,7 +61,8 @@ public sealed class AdminReviewsController(
 {
     /// <summary>Lists the articles waiting for review.</summary>
     /// <remarks>
-    /// Only PendingReview articles, oldest submission first by default. Filter with <c>authorId</c> and
+    /// First submissions (PendingReview articles) and revisions of published articles (PendingReview revisions) in one
+    /// queue; <c>kind</c> tells them apart and <c>revisionId</c> is set for a revision. Oldest submission first by default. Filter with <c>authorId</c> and
     /// <c>categoryId</c>; sort with <c>sort=submittedAt</c> and <c>direction=asc|desc</c>; page with <c>page</c> and
     /// <c>pageSize</c> (up to 100). Articles of suspended authors are included: each item carries the author's status.
     /// </remarks>

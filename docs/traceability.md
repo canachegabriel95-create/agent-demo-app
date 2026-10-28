@@ -22,3 +22,9 @@ Maps stories to the automated tests that cover them.
 | F17.4 | `automation/fe_automatio/tests/admin/dashboard.spec.ts` | counters match the data created through the API (AC1) |
 | F17.4 | `automation/fe_automatio/tests/admin/dashboard.spec.ts` | shows a loading state until the numbers arrive / shows an error state when the dashboard cannot be loaded (AC2) |
 | F17.4 | `automation/fe_automatio/tests/admin/dashboard.spec.ts` | the dash-* cards open their list pages (AC3) |
+| F17.5 | `automation/fe_automatio/tests/admin/invitations.spec.ts` | lists invitations with the status Available, Used, Expired and Revoked (AC1) |
+| F17.5 | `automation/fe_automatio/tests/admin/invitations.spec.ts` | filters by status and searches by email / paginates 20 invitations per page (AC2) |
+| F17.5 | `automation/fe_automatio/tests/admin/invitations.spec.ts` | revoking asks for confirmation and then marks the invitation Revoked (AC3) |
+| F17.5 | `automation/fe_automatio/tests/admin/invitations.spec.ts` | only Available invitations can be revoked (AC4) |
+| F17.5 | `automation/fe_automatio/tests/admin/invitations.spec.ts` | revoking an invitation that changed meanwhile shows the conflict message (AC5) |
+| F17.5 | `automation/fe_automatio/tests/admin/invitations.spec.ts` | empty / loading / error states (AC6) |

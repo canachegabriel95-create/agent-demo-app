@@ -2,6 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: './tests',
+  globalSetup: './global-setup.ts',
   forbidOnly: true,
   reporter: 'list',
   projects: [

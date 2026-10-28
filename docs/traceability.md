@@ -14,3 +14,8 @@ Maps stories to the automated tests that cover them.
 | F17.2 | `automation/fe_automatio/tests/admin/login.spec.ts` | a suspended admin cannot sign in (AC4) |
 | F17.2 | `automation/fe_automatio/tests/admin/login.spec.ts` | opening `/`, `/users`, `/invitations` without a session redirects to /login (AC5) |
 | F17.2 | `automation/fe_automatio/tests/admin/login.spec.ts` | submit button is disabled and shows progress while signing in (AC6) |
+| F17.3 | `automation/fe_automatio/tests/admin/layout.spec.ts` | every navigation link opens its page and is marked as current (AC1) |
+| F17.3 | `automation/fe_automatio/tests/admin/layout.spec.ts` | logging out clears the session, returns to /login and revokes the token (AC2) |
+| F17.3 | `automation/fe_automatio/tests/admin/layout.spec.ts` | a 401 from an API call clears the session and redirects to /login (AC3) |
+| F17.3 | `automation/fe_automatio/tests/admin/layout.spec.ts` | suspending the signed-in admin ends the session on the next request (AC4) |
+| F17.3 | `automation/fe_automatio/tests/admin/layout.spec.ts` | an unknown route shows the not-found view (AC5) |

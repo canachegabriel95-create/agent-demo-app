@@ -74,6 +74,16 @@ export async function createUser({ role, status = 'Active' }: NewUser): Promise<
   return { id, email, password };
 }
 
+export async function suspendUser(id: string): Promise<void> {
+  await withDb((db) =>
+    db.query(
+      `UPDATE users SET status = 'Suspended', suspension_reason = 'Suspended by an automated test.',
+                        suspended_at = now(), updated_at = now() WHERE id = $1`,
+      [id],
+    ),
+  );
+}
+
 /** Removes the given users and everything that points at them. */
 export async function deleteUsers(ids: string[]): Promise<void> {
   if (ids.length === 0) return;

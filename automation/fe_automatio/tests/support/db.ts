@@ -84,6 +84,21 @@ export async function suspendUser(id: string): Promise<void> {
   );
 }
 
+/** Sets the invitation's state directly: the API only produces Used through a registration and Expired through time. */
+export async function setInvitationState(
+  id: string,
+  state: { usedBy: string } | { expired: true },
+): Promise<void> {
+  await withDb((db) =>
+    'usedBy' in state
+      ? db.query('UPDATE invitations SET used_at = now(), used_by_user_id = $2 WHERE id = $1', [id, state.usedBy])
+      : db.query(
+          "UPDATE invitations SET created_at = now() - interval '8 days', expires_at = now() - interval '1 day' WHERE id = $1",
+          [id],
+        ),
+  );
+}
+
 /** Removes the given users and everything that points at them. */
 export async function deleteUsers(ids: string[]): Promise<void> {
   if (ids.length === 0) return;

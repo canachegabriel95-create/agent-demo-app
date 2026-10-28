@@ -211,4 +211,8 @@ npx playwright install chromium   # first time only
 npm run test:e2e                  # starts the portals if they are not already running
 ```
 
+Tests that need the API and database require the stack to be running (see above) and `E2E_DATABASE_URL` (for example `postgres://content_review:<password>@localhost:5432/content_review`). Start the API with `Auth__LoginAttemptsPerMinute=1000`, otherwise the login rate limit (10 per minute per IP) fails parallel tests.
+
+**The suite leaves the database clean.** Tests create their own users with an `e2e-` email prefix (`tests/support/db.ts`) and delete them, with their sessions and audit events, when the test ends. Before the run, leftovers of a crashed run are removed; after the run, it fails if any `e2e-` user remains.
+
 `ADMIN_URL` and `AUTHOR_URL` override the portal URLs. The HTML report is written to `playwright-report/`; traces, screenshots and videos are kept for failed tests only. Lint with `npm run lint` and type-check with `npm run typecheck`.
